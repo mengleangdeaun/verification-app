@@ -1,0 +1,39 @@
+{
+  "name": "verification-app",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "test": "node tests/test-e2e.mjs",
+    "test:db": "npx tsx tests/test-neon-direct.mjs",
+    "test:pagination": "npx tsx tests/test-pagination-and-api.mjs",
+    "db:init": "node scripts/init-db.mjs",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@ark-ui/solid": "^5.39.3",
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/node": "^9.1.0",
+    "@astrojs/solid-js": "^5.0.3",
+    "@kobalte/core": "^0.13.14",
+    "@neondatabase/serverless": "^1.2.0",
+    "@tanstack/solid-query": "^5.66.0",
+    "@tanstack/solid-table": "^8.21.2",
+    "astro": "^5.4.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "solid-js": "^1.9.5",
+    "tailwind-merge": "^3.7.0",
+    "typescript": "^5.7.3",
+    "uqr": "^0.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17"
+  }
+}

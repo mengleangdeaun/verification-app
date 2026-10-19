@@ -1,0 +1,9 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AdminDashboardShell from '../modules/admin-dashboard/AdminDashboardShell';
+
+export const prerender = false;
+---
+<Layout title="Admin Workspace — Certificate Ledger">
+  <AdminDashboardShell client:only="solid-js" />
+</Layout>

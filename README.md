@@ -191,7 +191,9 @@ npm run preview
 | `src/types/templates.ts` | `< 40 LOC` | 22 | PASS |
 | `src/modules/admin-dashboard/stores/dashboardStore.ts` | `< 100 LOC` | 64 | PASS |
 | `src/modules/verification-scanner/components/StatusBanner.tsx` | `< 100 LOC` | 75 | PASS |
-| `src/modules/admin-dashboard/components/CreateCertForm.tsx` | `< 150 LOC` | 131 | PASS |
+| `src/modules/admin-dashboard/components/CreateCertForm.tsx` | `< 150 LOC` | 134 | PASS |
+| `src/modules/admin-dashboard/components/IssuanceSuccessCard.tsx` | `< 110 LOC` | 104 | PASS |
+| `src/modules/admin-dashboard/components/TablePaginationBar.tsx` | `< 110 LOC` | 108 | PASS |
 | `src/modules/certificate-printer/components/PrintablePaper.tsx` | `< 200 LOC` | 142 | PASS |
 
 ---

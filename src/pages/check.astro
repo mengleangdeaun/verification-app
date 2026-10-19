@@ -1,0 +1,40 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { extractQueryParams } from '../modules/verification-scanner/hooks/useQueryParam';
+import { verifyCertificate } from '../utils/verifier';
+import StatusBanner from '../modules/verification-scanner/components/StatusBanner';
+import RecordDetails from '../modules/verification-scanner/components/RecordDetails';
+import PrintablePaper from '../modules/certificate-printer/components/PrintablePaper';
+
+export const prerender = false;
+
+const { id, sig } = extractQueryParams(Astro.url.searchParams);
+const result = await verifyCertificate(id, sig);
+---
+<Layout title={`Verification: ${id || 'Certificate Check'}`}>
+  <main class="max-w-4xl mx-auto w-full px-4 py-8 sm:py-12 print:hidden">
+    <div class="mb-6 flex items-center justify-between">
+      <a href="/" class="text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors">
+        &larr; Verify Another Document
+      </a>
+    </div>
+
+    <StatusBanner code={result.code} timestamp={result.timestamp} payloadHash={result.record?.payloadHash} />
+
+    {result.record && <RecordDetails record={result.record} />}
+  </main>
+
+  {/* Dedicated Window.print() Target Overlay for Clean Vector Paper Printing */}
+  {result.record && (
+    <div class="hidden print:block">
+      <PrintablePaper
+        data={result.record}
+        themeId={result.record.templateId || 'classic-diploma'}
+        paperSize={result.record.paperSize || 'A4'}
+        orientation={result.record.orientation || 'landscape'}
+        includeSignatures={true}
+        isPreview={false}
+      />
+    </div>
+  )}
+</Layout>
