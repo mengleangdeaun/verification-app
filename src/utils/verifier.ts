@@ -1,4 +1,4 @@
-import { buildCanonicalPayload, type VerificationResult } from '../types/certificates';
+import { buildCanonicalPayload, buildCanonicalPayloadLegacy, type VerificationResult } from '../types/certificates';
 import { base64UrlToUint8Array, verifyCanonicalPayload } from './crypto';
 import { getCertFromLedger } from './ledger';
 
@@ -37,7 +37,7 @@ export async function verifyCertificate(
     return { valid: false, code: 'INVALID_SIGNATURE', timestamp, record };
   }
 
-  const canonical = buildCanonicalPayload({
+  const canonicalWithDocType = buildCanonicalPayload({
     id: record.id,
     recipientName: record.recipientName,
     programTitle: record.programTitle,
@@ -49,12 +49,33 @@ export async function verifyCertificate(
     signatory1Title: record.signatory1Title,
     signatory2Name: record.signatory2Name || null,
     signatory2Title: record.signatory2Title || null,
+    docType: record.docType,
   });
 
-  const isSigValid = await verifyCanonicalPayload(canonical, cleanSig, pubKey);
+  let isSigValid = await verifyCanonicalPayload(canonicalWithDocType, cleanSig, pubKey);
+
+  // If validation fails, check if this is an older legacy certificate created before docType was added
+  if (!isSigValid) {
+    const canonicalLegacy = buildCanonicalPayloadLegacy({
+      id: record.id,
+      recipientName: record.recipientName,
+      programTitle: record.programTitle,
+      description: record.description,
+      level: record.level,
+      issueDate: record.issueDate,
+      expiryDate: record.expiryDate || null,
+      signatory1Name: record.signatory1Name,
+      signatory1Title: record.signatory1Title,
+      signatory2Name: record.signatory2Name || null,
+      signatory2Title: record.signatory2Title || null,
+    });
+    isSigValid = await verifyCanonicalPayload(canonicalLegacy, cleanSig, pubKey);
+  }
+
   if (!isSigValid) {
     return { valid: false, code: 'DATA_TAMPERED', timestamp, record };
   }
+
 
   if (record.status === 'REVOKED') {
     return { valid: false, code: 'CERTIFICATE_REVOKED', timestamp, record };

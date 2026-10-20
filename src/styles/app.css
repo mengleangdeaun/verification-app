@@ -161,3 +161,104 @@
   }
 }
 
+/* Precise Physical Certificate Print Styling */
+@page {
+  size: A4 landscape;
+  margin: 0mm !important;
+}
+
+@media print {
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* Physical Scale Typography & Proportions for Certificates */
+  .printable-certificate {
+    box-shadow: none !important;
+  }
+
+  /* Balanced inner framing padding for physical sheet */
+  .printable-certificate > div {
+    padding: 2.25rem 3.25rem !important; /* ~36px top/bottom, 52px left/right */
+  }
+
+  /* Prominent, authoritative Masthead on a single line */
+  .printable-certificate h2 {
+    font-size: 2.75rem !important; /* ~44px */
+    letter-spacing: 0.10em !important;
+    white-space: nowrap !important;
+    margin-bottom: 0.95rem !important;
+  }
+
+  .printable-certificate.orientation-portrait h2 {
+    font-size: 2.05rem !important; /* ~33px for 210mm portrait width */
+    letter-spacing: 0.07em !important;
+  }
+
+  .printable-certificate .lead-phrase {
+    font-size: 1.05rem !important; /* ~16.8px */
+    letter-spacing: 0.24em !important;
+    margin-bottom: 0.95rem !important;
+    opacity: 0.75 !important;
+  }
+
+  .printable-certificate h1 {
+    font-size: 4.15rem !important; /* ~66.4px */
+    line-height: 1.15 !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .printable-certificate .citation-body {
+    font-size: 1.35rem !important; /* ~21.6px */
+    line-height: 1.85 !important;
+    max-width: 56rem !important; /* ~896px: fills width gracefully */
+    margin-bottom: 0.5rem !important;
+  }
+
+  .printable-certificate .seal-img {
+    width: 6.25rem !important; /* 100px */
+    height: 6.25rem !important;
+  }
+
+  .printable-certificate .qr-box,
+  .printable-certificate .qr-box svg {
+    width: 5.25rem !important; /* 84px */
+    height: 5.25rem !important;
+  }
+
+  .printable-certificate .logo-img {
+    height: 5.25rem !important; /* 84px */
+  }
+
+  .printable-certificate .signature-col {
+    width: 15rem !important; /* 240px */
+  }
+
+  .printable-certificate .signature-img-container {
+    height: 4.75rem !important; /* 76px */
+  }
+
+  .printable-certificate .signature-img {
+    height: 4rem !important; /* 64px */
+  }
+
+  .printable-certificate .signatory-name {
+    font-size: 1.15rem !important; /* ~18.4px */
+  }
+
+  .printable-certificate .signatory-title {
+    font-size: 0.9rem !important; /* ~14.4px */
+  }
+}
+

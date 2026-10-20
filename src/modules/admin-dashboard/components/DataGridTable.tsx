@@ -1,6 +1,6 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import { useQueryClient } from '@tanstack/solid-query';
-import type { CertificateRecord } from '../../../types/certificates';
+import type { CertificateRecord, DocumentType } from '../../../types/certificates';
 import { dashboardStore } from '../stores/dashboardStore';
 import { useCreateCert } from '../queries/useCreateCert';
 import { useFetchCerts } from '../queries/useFetchCerts';
@@ -31,6 +31,7 @@ export default function DataGridTable(props: Props) {
   const [page, setPage] = createSignal(1);
   const [pageSize, setPageSize] = createSignal(10);
   const [statusFilter, setStatusFilter] = createSignal<'ALL' | 'ACTIVE' | 'REVOKED'>('ALL');
+  const [docTypeFilter, setDocTypeFilter] = createSignal<'ALL' | DocumentType>('ALL');
   const [debouncedSearch, setDebouncedSearch] = createSignal(state.searchFilter);
   const [copiedId, setCopiedId] = createSignal<string | null>(null);
   const [revokeTarget, setRevokeTarget] = createSignal<CertificateRecord | null>(null);
@@ -52,11 +53,17 @@ export default function DataGridTable(props: Props) {
     setPage(1);
   };
 
+  const handleDocTypeFilterChange = (dt: 'ALL' | DocumentType) => {
+    setDocTypeFilter(dt);
+    setPage(1);
+  };
+
   const certsQuery = useFetchCerts({
     page,
     pageSize,
     search: debouncedSearch,
     status: statusFilter,
+    docType: docTypeFilter,
   });
 
   const { updateStatus, deleteCert } = useCreateCert();
@@ -75,10 +82,12 @@ export default function DataGridTable(props: Props) {
         pageSize: String(pageSize()),
         search: debouncedSearch(),
         status: statusFilter(),
+        docType: docTypeFilter(),
+
       });
       void queryClient
         .query({
-          queryKey: ['certificates', token, nextPage, pageSize(), debouncedSearch(), statusFilter()],
+          queryKey: ['certificates', token, nextPage, pageSize(), debouncedSearch(), statusFilter(), docTypeFilter()],
           queryFn: async () => {
             const res = await fetch(`/api/verify?${params.toString()}`, {
               headers: { Authorization: `Bearer ${token}` },
@@ -91,6 +100,7 @@ export default function DataGridTable(props: Props) {
         .catch(() => {});
     }
   });
+
 
   const queryData = () => certsQuery.data;
   const certs = () => queryData()?.records || [];
@@ -182,8 +192,8 @@ export default function DataGridTable(props: Props) {
       <Card class="shadow-xs overflow-hidden">
         {/* Table Toolbar */}
         <div class="p-4 sm:p-5 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card">
-          <div class="flex items-center gap-3">
-            {/* Filter Pills with Tactile Scale */}
+          <div class="flex flex-wrap items-center gap-3">
+            {/* Status Filter Pills */}
             <div class="inline-flex bg-muted p-1 text-xs font-medium border border-border">
               {(['ALL', 'ACTIVE', 'REVOKED'] as const).map((st) => (
                 <button
@@ -200,10 +210,34 @@ export default function DataGridTable(props: Props) {
               ))}
             </div>
 
+            {/* Document Type Filter Pills */}
+            <div class="inline-flex bg-muted p-1 text-xs font-medium border border-border">
+              {[
+                { key: 'ALL', label: 'All Types' },
+                { key: 'COMPLETION', label: 'Completion' },
+                { key: 'QUALIFICATION', label: 'Qualification' },
+                { key: 'APPRECIATION', label: 'Appreciation' },
+                { key: 'PROMOTION', label: 'Promotion' },
+              ].map((t) => (
+                <button
+                  type="button"
+                  onClick={() => handleDocTypeFilterChange(t.key as any)}
+                  class={`px-2.5 py-1 text-[11px] transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97] cursor-pointer ${
+                    docTypeFilter() === t.key
+                      ? 'bg-background text-foreground shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             <div class="text-xs text-muted-foreground font-mono">
               {total()} credentials found
             </div>
           </div>
+
 
           <div class="flex items-center gap-3">
             {/* Search Input */}
@@ -263,13 +297,14 @@ export default function DataGridTable(props: Props) {
         <Table>
           <TableHeader class="bg-muted/40">
             <TableRow>
-              <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Certificate ID</TableHead>
+              <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Document ID</TableHead>
               <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Recipient</TableHead>
-              <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Program & Level</TableHead>
-              <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Issue Date</TableHead>
+              <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Subject / Scope</TableHead>
+              <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Date</TableHead>
               <TableHead class="py-3 px-5 text-[11px] font-semibold uppercase tracking-wider">Status</TableHead>
               <TableHead class="py-3 px-5 text-right text-[11px] font-semibold uppercase tracking-wider">Actions</TableHead>
             </TableRow>
+
           </TableHeader>
           <TableBody>
             <Show
@@ -336,31 +371,45 @@ export default function DataGridTable(props: Props) {
                 >
                   {(cert) => (
                   <TableRow class="hover:bg-muted/40 transition-colors">
-                    {/* ID with Copy */}
+                    {/* ID with Copy & Document Type Badge */}
                     <TableCell class="py-3.5 px-5 font-mono text-xs font-semibold">
-                      <div class="flex items-center gap-2">
-                        <span class="bg-muted px-2 py-0.5 border border-border text-foreground">
-                          {cert.id}
+                      <div class="flex flex-col gap-1 items-start">
+                        <span class={`inline-block text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase font-bold tracking-wider ${
+                          cert.docType === 'PROMOTION'
+                            ? 'border-indigo-500/40 bg-indigo-50/70 text-indigo-700'
+                            : cert.docType === 'QUALIFICATION'
+                            ? 'border-teal-500/40 bg-teal-50/70 text-teal-700'
+                            : cert.docType === 'APPRECIATION'
+                            ? 'border-amber-500/40 bg-amber-50/70 text-amber-700'
+                            : 'border-emerald-500/40 bg-emerald-50/70 text-emerald-700'
+                        }`}>
+                          {cert.docType === 'PROMOTION' ? 'Promotion' : cert.docType === 'QUALIFICATION' ? 'Qualification' : cert.docType === 'APPRECIATION' ? 'Appreciation' : 'Completion'}
                         </span>
-                        <Tooltip position="right">
-                          <TooltipTrigger
-                            as="button"
-                            type="button"
-                            onClick={() => handleCopyId(cert.id)}
-                            class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                          >
-                            {copiedId() === cert.id ? (
-                              <span class="text-[10px] text-emerald-600 font-bold">Copied!</span>
-                            ) : (
-                              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            )}
-                          </TooltipTrigger>
-                          <TooltipContent side="right">{copiedId() === cert.id ? 'Copied to clipboard!' : 'Copy Certificate ID'}</TooltipContent>
-                        </Tooltip>
+                        <div class="flex items-center gap-2">
+                          <span class="bg-muted px-2 py-0.5 border border-border text-foreground">
+                            {cert.id}
+                          </span>
+                          <Tooltip position="right">
+                            <TooltipTrigger
+                              as="button"
+                              type="button"
+                              onClick={() => handleCopyId(cert.id)}
+                              class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            >
+                              {copiedId() === cert.id ? (
+                                <span class="text-[10px] text-emerald-600 font-bold">Copied!</span>
+                              ) : (
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent side="right">{copiedId() === cert.id ? 'Copied to clipboard!' : 'Copy Certificate ID'}</TooltipContent>
+                          </Tooltip>
+                        </div>
                       </div>
                     </TableCell>
+
 
                     {/* Recipient */}
                     <TableCell class="py-3.5 px-5">
@@ -372,13 +421,11 @@ export default function DataGridTable(props: Props) {
                       </div>
                     </TableCell>
 
-                    {/* Program & Level */}
+                    {/* Subject / Scope */}
                     <TableCell class="py-3.5 px-5">
-                      <div class="font-medium text-foreground">{cert.programTitle}</div>
-                      <span class="inline-block mt-0.5 text-[10px] px-2 py-0.5 bg-muted text-muted-foreground font-medium border border-border">
-                        {cert.level}
-                      </span>
+                      <div class="font-medium text-foreground text-xs leading-normal">{cert.programTitle}</div>
                     </TableCell>
+
 
                     {/* Issue Date */}
                     <TableCell class="py-3.5 px-5 font-mono text-[11px] text-muted-foreground">

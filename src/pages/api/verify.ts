@@ -48,6 +48,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       const pageSize = parseInt(url.searchParams.get('pageSize') || '10', 10);
       const search = url.searchParams.get('search') || '';
       const status = (url.searchParams.get('status') || 'ALL') as 'ALL' | 'ACTIVE' | 'REVOKED';
+      const docType = (url.searchParams.get('docType') || 'ALL') as any;
 
       const result = await listCertsFromLedger(
         {
@@ -55,8 +56,9 @@ export const GET: APIRoute = async ({ request, url }) => {
           SHEETS_PROXY_URL: process.env.SHEETS_PROXY_URL || import.meta.env.SHEETS_PROXY_URL,
           SHEETS_BEARER_TOKEN: process.env.SHEETS_BEARER_TOKEN || import.meta.env.SHEETS_BEARER_TOKEN,
         },
-        { page, pageSize, search, status }
+        { page, pageSize, search, status, docType }
       );
+
       return new Response(JSON.stringify(result), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },

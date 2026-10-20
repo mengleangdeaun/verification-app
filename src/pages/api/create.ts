@@ -45,6 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const {
+      docType = 'COMPLETION',
       recipientName, programTitle, description, level, issueDate, expiryDate,
       signatory1Name, signatory1Title, signatory2Name, signatory2Title,
       templateId, paperSize, orientation
@@ -60,10 +61,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     const year = new Date().getFullYear();
     const hex = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const id = `CERT-${year}-${hex}`;
+    let prefix = 'CERT';
+    if (docType === 'QUALIFICATION') prefix = 'COQ';
+    else if (docType === 'APPRECIATION') prefix = 'LOA';
+    else if (docType === 'PROMOTION') prefix = 'LOP';
+    const id = `${prefix}-${year}-${hex}`;
 
     const canonical = buildCanonicalPayload({
-      id, recipientName, programTitle, description, level, issueDate,
+      id, docType, recipientName, programTitle, description, level, issueDate,
       expiryDate: expiryDate || null, signatory1Name, signatory1Title,
       signatory2Name: signatory2Name || null, signatory2Title: signatory2Title || null,
     });
@@ -81,11 +86,12 @@ export const POST: APIRoute = async ({ request }) => {
     const verificationUrl = `${appUrl}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(signature)}`;
 
     const record: CertificateRecord = {
-      id, recipientName, programTitle, description, level, issueDate,
+      id, docType, recipientName, programTitle, description, level, issueDate,
       expiryDate: expiryDate || null, signatory1Name, signatory1Title,
       signatory2Name: signatory2Name || null, signatory2Title: signatory2Title || null,
       templateId, paperSize, orientation, status: 'ACTIVE', payloadHash, signature, verificationUrl,
     };
+
 
     await appendCertToLedger(record, {
       DATABASE_URL: process.env.DATABASE_URL || import.meta.env.DATABASE_URL,
@@ -151,7 +157,7 @@ export const PUT: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const {
-      id, recipientName, programTitle, description, level, issueDate, expiryDate,
+      id, docType = 'COMPLETION', recipientName, programTitle, description, level, issueDate, expiryDate,
       signatory1Name, signatory1Title, signatory2Name, signatory2Title,
       templateId, paperSize, orientation, status
     } = body;
@@ -165,7 +171,7 @@ export const PUT: APIRoute = async ({ request }) => {
     }
 
     const canonical = buildCanonicalPayload({
-      id, recipientName, programTitle, description, level, issueDate,
+      id, docType, recipientName, programTitle, description, level, issueDate,
       expiryDate: expiryDate || null, signatory1Name, signatory1Title,
       signatory2Name: signatory2Name || null, signatory2Title: signatory2Title || null,
     });
@@ -183,13 +189,14 @@ export const PUT: APIRoute = async ({ request }) => {
     const verificationUrl = `${appUrl}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(signature)}`;
 
     const record: CertificateRecord = {
-      id, recipientName, programTitle, description, level, issueDate,
+      id, docType, recipientName, programTitle, description, level, issueDate,
       expiryDate: expiryDate || null, signatory1Name, signatory1Title,
       signatory2Name: signatory2Name || null, signatory2Title: signatory2Title || null,
       templateId, paperSize, orientation,
       status: status || 'ACTIVE',
       payloadHash, signature, verificationUrl,
     };
+
 
     const updated = await updateCertInLedger(record, {
       DATABASE_URL: process.env.DATABASE_URL || import.meta.env.DATABASE_URL,

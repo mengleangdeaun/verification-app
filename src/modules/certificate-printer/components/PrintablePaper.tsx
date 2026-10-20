@@ -1,4 +1,4 @@
-import { createMemo, Show } from 'solid-js';
+import { createMemo } from 'solid-js';
 import type { CertificateRecord, CreateCertificateInput } from '../../../types/certificates';
 import type { PaperOrientation, PaperSize, TemplateId } from '../../../types/templates';
 import { PAPER_GEOMETRIES, THEMES } from '../constants/themes';
@@ -13,33 +13,66 @@ interface Props {
   isPreview?: boolean;
 }
 
+import { formatDisplayDate, cleanDescription } from '../utils/formatUtils';
+
 export default function PrintablePaper(props: Props) {
   const geom = createMemo(() => PAPER_GEOMETRIES[props.paperSize]?.[props.orientation] || PAPER_GEOMETRIES.A4.landscape);
   const theme = createMemo(() => THEMES[props.themeId] || THEMES['classic-diploma']);
   const isLandscape = createMemo(() => props.orientation === 'landscape');
 
-  const isTech = () => props.themeId === 'modern-tech';
-  const isISO = () => props.themeId === 'iso-compliance';
   const isClassic = () => props.themeId === 'classic-diploma';
+
+  const docType = () => (props.data as any).docType || 'COMPLETION';
+  const isQualification = () => docType() === 'QUALIFICATION';
+  const isAppreciation = () => docType() === 'APPRECIATION';
+  const isPromotion = () => docType() === 'PROMOTION';
+
+  const mastheadTitle = () => {
+    if (isQualification()) return 'Certificate of Qualification';
+    if (isAppreciation()) return 'Letter of Appreciation';
+    if (isPromotion()) return 'Letter of Promotion';
+    return 'Certificate of Completion';
+  };
+
+  const leadPhrase = () => {
+    if (isAppreciation()) return 'This letter is proudly presented to';
+    if (isPromotion()) return 'This officially certifies that';
+    if (isQualification()) return 'This is to certify that';
+    return 'This is to verify that';
+  };
+
+  const fullCitation = () => {
+    let text = cert().desc;
+    // If an expiry date is specified on the credential and not already written into the citation:
+    if (cert().expiryDate && !/valid\s+(?:until|through)/i.test(text)) {
+      const formattedExpiry = formatDisplayDate(cert().expiryDate);
+      if (formattedExpiry) {
+        text = text.replace(/[\.\s]+$/, '');
+        text = `${text}, valid until ${formattedExpiry}.`;
+      }
+    }
+    return text;
+  };
 
   const cert = () => ({
     id: (props.data as any).id || 'CERT-DRAFT-PREVIEW',
+    docType: docType(),
     recipient: props.data.recipientName || 'Recipient Full Name',
-    program: props.data.programTitle || 'Program / Credential Title',
-    desc: props.data.description || 'For demonstrating exceptional mastery and fulfilling all official requirements of the verified curriculum.',
-    level: props.data.level || 'Mastery Level',
+    program: props.data.programTitle || (isPromotion() ? 'Promoted Role / Title' : isQualification() ? 'Certified Qualification' : isAppreciation() ? 'Recognition Occasion' : 'Program / Credential Title'),
+    desc: cleanDescription(props.data.description || 'For demonstrating exceptional mastery and fulfilling all official requirements of the verified curriculum.', props.data.recipientName || ''),
+    level: props.data.level || 'Standard',
     issueDate: props.data.issueDate || new Date().toISOString().split('T')[0],
     expiryDate: props.data.expiryDate || null,
-    sig1Name: props.data.signatory1Name || 'Dr. Virak Both',
-    sig1Title: props.data.signatory1Title || 'Executive Director',
+    sig1Name: props.data.signatory1Name || 'Sok Sabay',
+    sig1Title: props.data.signatory1Title || 'Technical Supervisor',
     sig2Name: props.data.signatory2Name || '',
-    sig2Title: props.data.signatory2Title || 'Registrar General',
+    sig2Title: props.data.signatory2Title || 'Managing Director',
     verifyUrl: (props.data as any).verificationUrl || 'https://verify.example.com',
   });
 
   return (
     <div
-      class={`printable-certificate relative box-border overflow-hidden select-none transition-all duration-300 ${
+      class={`printable-certificate ${isLandscape() ? 'orientation-landscape' : 'orientation-portrait'} relative box-border overflow-hidden select-none transition-all duration-300 ${
         props.isPreview
           ? 'mx-auto shadow-xl border border-slate-200/80'
           : 'print-only-container w-full h-full'
@@ -52,122 +85,106 @@ export default function PrintablePaper(props: Props) {
         'aspect-ratio': `${geom().widthMm} / ${geom().heightMm}`,
       }}
     >
-      {/* Modern Tech Corner Crosshairs */}
-      <Show when={isTech()}>
-        <div class="absolute top-2 left-2 text-cyan-600/60 font-mono text-xs select-none pointer-events-none">+</div>
-        <div class="absolute top-2 right-2 text-cyan-600/60 font-mono text-xs select-none pointer-events-none">+</div>
-        <div class="absolute bottom-2 left-2 text-cyan-600/60 font-mono text-xs select-none pointer-events-none">+</div>
-        <div class="absolute bottom-2 right-2 text-cyan-600/60 font-mono text-xs select-none pointer-events-none">+</div>
-      </Show>
+
 
       {/* Certificate Framing */}
       <div class={`h-full w-full flex flex-col justify-between ${theme().borderClass}`}>
         {/* Header */}
-        <div class="flex items-center justify-between border-b border-current/15 pb-4">
+        <div class={`flex items-center justify-between border-b border-current/15 ${props.isPreview ? 'pb-3.5' : 'pb-4'}`}>
           <div class="flex items-center">
             <img
               src="/assets/logo.svg"
               alt="Emblem"
-              class="h-16 sm:h-20 w-auto object-contain shrink-0 block"
-              style={{ height: '64px', width: 'auto' }}
+              class={`logo-img ${props.isPreview ? 'h-16' : 'h-20'} w-auto object-contain shrink-0 block`}
+              style={{ height: props.isPreview ? '64px' : '78px', width: 'auto' }}
             />
           </div>
-          <div class="text-right">
-            <span class={`inline-block text-[10px] font-mono px-2.5 py-0.5 rounded border uppercase font-semibold ${
-              isTech()
-                ? 'border-cyan-500/40 bg-cyan-50/60 text-cyan-800'
-                : isISO()
-                ? 'border-blue-500/40 bg-blue-50/60 text-blue-800'
-                : 'border-amber-600/30 bg-amber-50/60 text-amber-900'
-            }`}>
-              {cert().level}
-            </span>
-            <p class="text-[10px] font-mono opacity-60 mt-1 tabular-nums">{cert().id}</p>
+          <div class="flex items-center justify-end">
+            <div class="qr-box p-0 m-0 bg-transparent">
+              <VectorQrCode value={cert().verifyUrl} class={props.isPreview ? 'w-16 h-16' : 'w-20 h-20'} />
+            </div>
           </div>
         </div>
 
         {/* Central Citation */}
-        <div class="my-auto text-center px-6 py-2">
-          {/* Program Title centered and above 'This is to certify that' */}
-          <h2 class={`text-lg sm:text-xl font-bold tracking-wider uppercase mb-2 text-foreground ${
-            isClassic() ? 'font-serif tracking-widest' : isTech() ? 'font-sans font-extrabold tracking-tight' : 'font-sans font-bold tracking-wide'
-          }`}>
-            {cert().program}
-          </h2>
+        <div class={`my-auto text-center ${props.isPreview ? 'px-6 py-4' : 'px-8 py-4'}`}>
+          {/* Official Document Masthead */}
+          <div class={props.isPreview ? 'mb-3' : 'mb-3.5'}>
+            <h2 class={`${
+              props.isPreview
+                ? (isLandscape() ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl')
+                : (isLandscape() ? 'text-3xl sm:text-4xl lg:text-5xl' : 'text-2xl sm:text-3xl')
+            } font-bold tracking-[0.10em] uppercase text-foreground whitespace-nowrap ${
+              isClassic() ? 'font-serif' : 'font-sans'
+            }`}>
+              {mastheadTitle()}
+            </h2>
 
-          <p class="text-xs uppercase tracking-widest font-semibold opacity-60 mb-2">This is to certify that</p>
+            <div class={`flex items-center justify-center gap-2 ${props.isPreview ? 'my-2.5' : 'my-3'} text-current/25`}>
+              <div class={`h-px ${props.isPreview ? 'w-16' : 'w-28'} bg-current opacity-25`}></div>
+              <span class={props.isPreview ? 'text-xs' : 'text-sm'}>✦</span>
+              <div class={`h-px ${props.isPreview ? 'w-16' : 'w-28'} bg-current opacity-25`}></div>
+            </div>
+          </div>
+
+          <p class={`lead-phrase ${props.isPreview ? 'text-xs sm:text-sm mb-2.5' : 'text-sm sm:text-base mb-3'} uppercase tracking-[0.22em] font-semibold opacity-65`}>
+            {leadPhrase()}
+          </p>
           
-          <h1 class={`text-3xl sm:text-4xl font-bold tracking-tight mb-2 text-foreground ${theme().fontFamilyHeading}`}>
+          <h1 class={`${props.isPreview ? 'text-3xl sm:text-4xl lg:text-5xl mb-3.5' : 'text-5xl sm:text-6xl mb-4'} font-bold tracking-tight text-foreground ${theme().fontFamilyHeading}`}>
             {cert().recipient}
           </h1>
 
-          <Show when={isClassic()}>
-            <div class="flex items-center justify-center gap-2 my-2 text-amber-700/40">
-              <div class="h-px w-14 bg-amber-700/30"></div>
-              <span class="text-xs">✦</span>
-              <div class="h-px w-14 bg-amber-700/30"></div>
-            </div>
-          </Show>
-
-          <p class="text-xs sm:text-sm max-w-xl mx-auto leading-relaxed opacity-75 mb-3 text-foreground">
-            {cert().desc}
+          <p class={`citation-body ${props.isPreview ? 'text-sm sm:text-base max-w-2xl px-4' : 'text-lg sm:text-xl max-w-4xl px-6 leading-[1.8]'} mx-auto leading-relaxed text-foreground/85`}>
+            {fullCitation()}
           </p>
-
-          <div class="flex items-center justify-center gap-6 text-[11px] opacity-75 font-mono">
-            <span>Issued: <strong class="tabular-nums font-semibold">{cert().issueDate}</strong></span>
-            <span>•</span>
-            <span>Valid: <strong class="tabular-nums font-semibold">{cert().expiryDate || 'Lifetime'}</strong></span>
-          </div>
         </div>
 
-        {/* Footer: Signatures, Seal & QR */}
-        <div class="flex items-end justify-between border-t border-current/15 pt-4 gap-4">
+        {/* Footer: Signatures & Centered Seal */}
+        <div class={`flex items-end justify-between border-t border-current/15 ${props.isPreview ? 'pt-4' : 'pt-4'} gap-4`}>
           {/* Signatory 1 */}
-          <div class="w-40 text-center">
-            <div class="h-14 flex items-end justify-center pb-0.5">
+          <div class={`signature-col ${props.isPreview ? 'w-40 sm:w-44' : 'w-52'} text-center`}>
+            <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center pb-1`}>
               <img
                 src="/assets/sig-1.svg"
                 alt="Signature 1"
-                class={`h-12 max-w-full object-contain transition-opacity duration-200 ${
+                class={`signature-img ${props.isPreview ? 'h-12' : 'h-14'} max-w-full object-contain transition-opacity duration-200 ${
                   props.includeSignatures ? 'opacity-100' : 'opacity-0 pointer-events-none'
                 }`}
               />
             </div>
             <div class="border-t border-current/50 pt-1">
-              <p class="text-xs font-bold truncate text-foreground">{cert().sig1Name}</p>
-              <p class="text-[10px] opacity-70 truncate">{cert().sig1Title}</p>
+              <p class={`signatory-name ${props.isPreview ? 'text-xs sm:text-sm' : 'text-base'} font-bold truncate text-foreground`}>{cert().sig1Name}</p>
+              <p class={`signatory-title ${props.isPreview ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} opacity-70 truncate`}>{cert().sig1Title}</p>
             </div>
           </div>
 
-          {/* Official Seal & QR */}
-          <div class="flex items-center gap-4">
-            <img src={theme().sealAssetPath} alt="Seal" class="h-14 w-14 object-contain drop-shadow-xs" />
-            <div class="text-center">
-              <VectorQrCode value={cert().verifyUrl} class="w-14 h-14" />
-            </div>
+          {/* Official Seal Centered Between Signatures */}
+          <div class="flex items-center justify-center">
+            <img src={theme().sealAssetPath} alt="Seal" class={`seal-img ${props.isPreview ? 'h-16 w-16 sm:h-18 sm:w-18' : 'h-22 w-22'} object-contain drop-shadow-xs`} />
           </div>
 
           {/* Signatory 2 */}
-          <div class="w-40 text-center">
+          <div class={`signature-col ${props.isPreview ? 'w-40 sm:w-44' : 'w-52'} text-center`}>
             {cert().sig2Name ? (
               <>
-                <div class="h-14 flex items-end justify-center pb-0.5">
+                <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center pb-1`}>
                   <img
                     src="/assets/sig-2.svg"
                     alt="Signature 2"
-                    class={`h-12 max-w-full object-contain transition-opacity duration-200 ${
+                    class={`signature-img ${props.isPreview ? 'h-12' : 'h-14'} max-w-full object-contain transition-opacity duration-200 ${
                       props.includeSignatures ? 'opacity-100' : 'opacity-0 pointer-events-none'
                     }`}
                   />
                 </div>
                 <div class="border-t border-current/50 pt-1">
-                  <p class="text-xs font-bold truncate text-foreground">{cert().sig2Name}</p>
-                  <p class="text-[10px] opacity-70 truncate">{cert().sig2Title}</p>
+                  <p class={`signatory-name ${props.isPreview ? 'text-xs sm:text-sm' : 'text-base'} font-bold truncate text-foreground`}>{cert().sig2Name}</p>
+                  <p class={`signatory-title ${props.isPreview ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} opacity-70 truncate`}>{cert().sig2Title}</p>
                 </div>
               </>
             ) : (
-              <div class="h-14 flex items-end justify-center">
-                <div class="border-t border-current/30 w-32 pt-1">
+              <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center`}>
+                <div class={`border-t border-current/30 ${props.isPreview ? 'w-32' : 'w-44'} pt-1`}>
                   <p class="text-[10px] opacity-50">Verified Authority</p>
                 </div>
               </div>

@@ -119,30 +119,236 @@ export default function CreateCertForm() {
                 </div>
               )}
 
+              {/* Document Type Selector */}
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-foreground">Document Type *</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => dashboardStore.setDocType('COMPLETION')}
+                    class={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                      (state.draft.docType || 'COMPLETION') === 'COMPLETION'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200 ring-1 ring-emerald-500/30'
+                        : 'border-border bg-card hover:bg-muted/50 text-foreground'
+                    }`}
+                  >
+                    <div>
+                      <p class="text-xs font-bold">Certificate of Completion</p>
+                      <p class="text-[10px] text-muted-foreground mt-0.5">Course & skill training</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => dashboardStore.setDocType('QUALIFICATION')}
+                    class={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                      state.draft.docType === 'QUALIFICATION'
+                        ? 'border-teal-500 bg-teal-500/10 text-teal-950 dark:text-teal-200 ring-1 ring-teal-500/30'
+                        : 'border-border bg-card hover:bg-muted/50 text-foreground'
+                    }`}
+                  >
+                    <div>
+                      <p class="text-xs font-bold">Certificate of Qualification</p>
+                      <p class="text-[10px] text-muted-foreground mt-0.5">Trade mastery & competency</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => dashboardStore.setDocType('APPRECIATION')}
+                    class={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                      state.draft.docType === 'APPRECIATION'
+                        ? 'border-amber-500 bg-amber-500/10 text-amber-950 dark:text-amber-200 ring-1 ring-amber-500/30'
+                        : 'border-border bg-card hover:bg-muted/50 text-foreground'
+                    }`}
+                  >
+                    <div>
+                      <p class="text-xs font-bold">Letter of Appreciation</p>
+                      <p class="text-[10px] text-muted-foreground mt-0.5">Excellence & dedication</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => dashboardStore.setDocType('PROMOTION')}
+                    class={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                      state.draft.docType === 'PROMOTION'
+                        ? 'border-indigo-500 bg-indigo-500/10 text-indigo-950 dark:text-indigo-200 ring-1 ring-indigo-500/30'
+                        : 'border-border bg-card hover:bg-muted/50 text-foreground'
+                    }`}
+                  >
+                    <div>
+                      <p class="text-xs font-bold">Letter of Promotion</p>
+                      <p class="text-[10px] text-muted-foreground mt-0.5">Role step & rank advance</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Recipient Field */}
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                 <TextField class="space-y-2">
                   <TextFieldLabel>Recipient Full Name *</TextFieldLabel>
-                  <TextFieldInput required value={state.draft.recipientName} onInput={(e) => setState('draft', 'recipientName', e.currentTarget.value)} placeholder="e.g. Sokha Chan" />
+                  <TextFieldInput
+                    required
+                    value={state.draft.recipientName}
+                    onInput={(e) => {
+                      const name = e.currentTarget.value;
+                      setState('draft', 'recipientName', name);
+                      setState('draft', 'description', dashboardStore.buildStrongTemplate({ ...state.draft, recipientName: name }));
+                    }}
+                    placeholder="e.g. Deaun Mengleang"
+                  />
                 </TextField>
-                <TextField class="space-y-2">
-                  <TextFieldLabel>Program / Course Title *</TextFieldLabel>
-                  <TextFieldInput required value={state.draft.programTitle} onInput={(e) => setState('draft', 'programTitle', e.currentTarget.value)} placeholder="e.g. Full-Stack Web Engineering" />
-                </TextField>
+
+                <Show
+                  when={state.draft.docType === 'PROMOTION'}
+                  fallback={
+                    <TextField class="space-y-2">
+                      <TextFieldLabel>
+                        {state.draft.docType === 'QUALIFICATION'
+                          ? 'Trade / Qualification Specialty *'
+                          : state.draft.docType === 'APPRECIATION'
+                          ? 'Event / Occasion *'
+                          : 'Training Program / Course *'}
+                      </TextFieldLabel>
+                      <TextFieldInput
+                        required
+                        value={state.draft.programTitle}
+                        onInput={(e) => {
+                          const val = e.currentTarget.value;
+                          setState('draft', 'programTitle', val);
+                          if (state.draft.docType === 'QUALIFICATION') {
+                            setState('draft', 'qualificationTitle', val);
+                          } else if (state.draft.docType === 'APPRECIATION') {
+                            setState('draft', 'appreciationEvent', val);
+                          }
+                          setState('draft', 'description', dashboardStore.buildStrongTemplate({
+                            ...state.draft,
+                            programTitle: val,
+                            qualificationTitle: val,
+                            appreciationEvent: val,
+                          }));
+                        }}
+                        placeholder={
+                          state.draft.docType === 'QUALIFICATION'
+                            ? 'e.g. PPF Master Installer & Surface Specialist'
+                            : state.draft.docType === 'APPRECIATION'
+                            ? 'e.g. Autoshow Expo'
+                            : 'e.g. PPF Installation Training Program'
+                        }
+                      />
+                    </TextField>
+                  }
+                >
+                  <div class="grid grid-cols-2 gap-2">
+                    <TextField class="space-y-2">
+                      <TextFieldLabel>From Current Role *</TextFieldLabel>
+                      <TextFieldInput
+                        required
+                        value={state.draft.promotionFromRole || ''}
+                        onInput={(e) => {
+                          const from = e.currentTarget.value;
+                          setState('draft', 'promotionFromRole', from);
+                          const title = `${from} → ${state.draft.promotionToRole || ''}`;
+                          setState('draft', 'programTitle', title);
+                          setState('draft', 'description', dashboardStore.buildStrongTemplate({
+                            ...state.draft,
+                            promotionFromRole: from,
+                            programTitle: title,
+                          }));
+                        }}
+                        placeholder="e.g. L0 Intern"
+                      />
+                    </TextField>
+                    <TextField class="space-y-2">
+                      <TextFieldLabel>To Promoted Role *</TextFieldLabel>
+                      <TextFieldInput
+                        required
+                        value={state.draft.promotionToRole || ''}
+                        onInput={(e) => {
+                          const to = e.currentTarget.value;
+                          setState('draft', 'promotionToRole', to);
+                          const title = `${state.draft.promotionFromRole || ''} → ${to}`;
+                          setState('draft', 'programTitle', title);
+                          setState('draft', 'description', dashboardStore.buildStrongTemplate({
+                            ...state.draft,
+                            promotionToRole: to,
+                            programTitle: title,
+                          }));
+                        }}
+                        placeholder="e.g. L1 Junior Technician"
+                      />
+                    </TextField>
+                  </div>
+                </Show>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-                <TextField class="space-y-2">
-                  <TextFieldLabel>Level (Free-text) *</TextFieldLabel>
-                  <TextFieldInput required value={state.draft.level} onInput={(e) => setState('draft', 'level', e.currentTarget.value)} placeholder="e.g. Level 4 / Advanced" />
-                </TextField>
-                <DatePickerField id="issue-date" label="Issue Date *" value={state.draft.issueDate} onChange={(v) => setState('draft', 'issueDate', v)} required />
-                <DatePickerField id="expiry-date" label="Expiry Date (Optional)" value={state.draft.expiryDate || ''} onChange={(v) => setState('draft', 'expiryDate', v || null)} />
+              {/* Contextual Date Fields (No Level / Rank fields!) */}
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <DatePickerField
+                  id="issue-date"
+                  label={
+                    state.draft.docType === 'PROMOTION'
+                      ? 'Effective Promotion Date *'
+                      : state.draft.docType === 'QUALIFICATION'
+                      ? 'Qualification Conferred Date *'
+                      : state.draft.docType === 'APPRECIATION'
+                      ? 'Presentation Date *'
+                      : 'Completion Date *'
+                  }
+                  value={state.draft.issueDate}
+                  onChange={(v) => {
+                    setState('draft', 'issueDate', v);
+                    setState('draft', 'description', dashboardStore.buildStrongTemplate({ ...state.draft, issueDate: v }));
+                  }}
+                  required
+                />
+
+                <Show when={state.draft.docType === 'COMPLETION' || state.draft.docType === 'QUALIFICATION'}>
+                  <DatePickerField
+                    id="expiry-date"
+                    label={state.draft.docType === 'QUALIFICATION' ? 'Recertification / Expiry Date (Optional)' : 'Expiry Date (Optional)'}
+                    value={state.draft.expiryDate || ''}
+                    onChange={(v) => {
+                      setState('draft', 'expiryDate', v || null);
+                      setState('draft', 'description', dashboardStore.buildStrongTemplate({
+                        ...state.draft,
+                        expiryDate: v || null,
+                      }));
+                    }}
+                  />
+                </Show>
               </div>
 
-              <TextField class="space-y-2">
-                <TextFieldLabel>Citation Description *</TextFieldLabel>
-                <TextFieldTextArea rows="3" required value={state.draft.description} onInput={(e) => setState('draft', 'description', e.currentTarget.value)} placeholder="For successfully completing the comprehensive curriculum with honors..." />
-              </TextField>
+              {/* Citation Description */}
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <TextFieldLabel>Citation Statement *</TextFieldLabel>
+                    <span class="text-[10px] text-muted-foreground ml-2">Connects directly after recipient name on parchment</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const strongText = dashboardStore.buildStrongTemplate(state.draft);
+                      setState('draft', 'description', strongText);
+                    }}
+                    class="text-[11px] font-semibold text-primary hover:text-primary/80 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span>⚡ Reset to Strong Formula</span>
+                  </button>
+                </div>
+                <TextFieldTextArea
+                  rows="3"
+                  required
+                  value={state.draft.description}
+                  onInput={(e) => setState('draft', 'description', e.currentTarget.value)}
+                  placeholder="Official decree statement..."
+                  class="font-normal text-xs leading-relaxed"
+                />
+              </div>
+
 
               <SignatoryFields
                 signatory1Name={state.draft.signatory1Name}
@@ -151,6 +357,7 @@ export default function CreateCertForm() {
                 signatory2Title={state.draft.signatory2Title}
                 onUpdate={(field, val) => setState('draft', field, val)}
               />
+
 
               <Button
                 type="submit"

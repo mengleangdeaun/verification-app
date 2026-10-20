@@ -90,11 +90,16 @@ async function init() {
   `;
   console.log('  \x1b[32m✔\x1b[0m Table `certificates` ready');
 
-  // 3. Create Indexes
+  // 3. Create Indexes & Migrations
+  await sql`
+    ALTER TABLE certificates 
+    ADD COLUMN IF NOT EXISTS doc_type VARCHAR(32) NOT NULL DEFAULT 'COMPLETION';
+  `;
   await sql`CREATE INDEX IF NOT EXISTS idx_certs_status ON certificates(status);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_certs_recipient ON certificates(recipient_name);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_certs_created_at ON certificates(created_at DESC);`;
-  console.log('  \x1b[32m✔\x1b[0m Indexes created (idx_certs_status, idx_certs_recipient, idx_certs_created_at)');
+  await sql`CREATE INDEX IF NOT EXISTS idx_certs_doc_type ON certificates(doc_type);`;
+  console.log('  \x1b[32m✔\x1b[0m Indexes & column migrations verified (doc_type, status, recipient, created_at)');
 
   // 4. Optional import from mock ledger if it exists
   const mockPath = path.resolve(process.cwd(), 'data', 'mock-ledger.json');

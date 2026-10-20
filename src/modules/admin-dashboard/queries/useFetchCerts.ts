@@ -1,5 +1,5 @@
 import { createQuery, keepPreviousData } from '@tanstack/solid-query';
-import type { PaginatedCertificatesResult } from '../../../types/certificates';
+import type { DocumentType, PaginatedCertificatesResult } from '../../../types/certificates';
 import { dashboardStore } from '../stores/dashboardStore';
 
 export interface UseFetchCertsOptions {
@@ -7,6 +7,7 @@ export interface UseFetchCertsOptions {
   pageSize?: () => number;
   search?: () => string;
   status?: () => 'ALL' | 'ACTIVE' | 'REVOKED';
+  docType?: () => 'ALL' | DocumentType;
 }
 
 export function useFetchCerts(options?: UseFetchCertsOptions) {
@@ -14,9 +15,10 @@ export function useFetchCerts(options?: UseFetchCertsOptions) {
   const pageSize = () => options?.pageSize?.() ?? 10;
   const search = () => options?.search?.() ?? '';
   const status = () => options?.status?.() ?? 'ALL';
+  const docType = () => options?.docType?.() ?? 'ALL';
 
   return createQuery<PaginatedCertificatesResult>(() => ({
-    queryKey: ['certificates', dashboardStore.state.adminToken, page(), pageSize(), search(), status()],
+    queryKey: ['certificates', dashboardStore.state.adminToken, page(), pageSize(), search(), status(), docType()],
     queryFn: async () => {
       const token = dashboardStore.state.adminToken;
       if (!token) {
@@ -36,7 +38,9 @@ export function useFetchCerts(options?: UseFetchCertsOptions) {
         pageSize: String(pageSize()),
         search: search(),
         status: status(),
+        docType: docType(),
       });
+
 
       const res = await fetch(`/api/verify?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },

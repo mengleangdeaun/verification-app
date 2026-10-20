@@ -13,14 +13,29 @@ export default function RecordDetails(props: Props) {
     triggerCertificatePrint(r.paperSize || 'A4', r.orientation || 'landscape');
   };
 
+  const docTypeLabel = () => {
+    if (r.docType === 'PROMOTION') return 'Letter of Promotion';
+    if (r.docType === 'QUALIFICATION') return 'Certificate of Qualification';
+    if (r.docType === 'APPRECIATION') return 'Letter of Appreciation';
+    return 'Certificate of Completion';
+  };
+
   return (
     <div class="mt-8 space-y-6">
       {/* Top Action Bar */}
-      <div class="flex items-center justify-between bg-card border border-border p-3.5 shadow-xs">
+      <div class="no-print flex items-center justify-between bg-card border border-border p-3.5 shadow-xs">
         <div class="flex items-center gap-2">
-          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Verified Document View
+          <span class={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono font-medium border ${
+            r.docType === 'PROMOTION'
+              ? 'bg-indigo-500/10 text-indigo-700 border-indigo-500/20'
+              : r.docType === 'QUALIFICATION'
+              ? 'bg-teal-500/10 text-teal-700 border-teal-500/20'
+              : r.docType === 'APPRECIATION'
+              ? 'bg-amber-500/10 text-amber-700 border-amber-500/20'
+              : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+          }`}>
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+            Verified {docTypeLabel()}
           </span>
           <span class="text-xs text-muted-foreground hidden sm:inline">•</span>
           <span class="text-xs text-muted-foreground hidden sm:inline">
@@ -39,8 +54,8 @@ export default function RecordDetails(props: Props) {
         </button>
       </div>
 
-      {/* Official Certificate Paper Preview - Exact match with Admin Dashboard */}
-      <div class="overflow-x-auto pb-4">
+      {/* Official Certificate Paper Preview - Screen Display */}
+      <div class="no-print overflow-x-auto pb-4">
         <PrintablePaper
           data={r}
           themeId={r.templateId || 'classic-diploma'}
@@ -52,7 +67,7 @@ export default function RecordDetails(props: Props) {
       </div>
 
       {/* Cryptographic Proof & Ledger Audit Card */}
-      <div class="bg-card border border-border p-6 shadow-xs space-y-4">
+      <div class="no-print bg-card border border-border p-6 shadow-xs space-y-4">
         <div class="flex items-center justify-between border-b border-border pb-3">
           <div class="flex items-center gap-2">
             <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,24 +80,35 @@ export default function RecordDetails(props: Props) {
           </span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div>
+            <span class="text-muted-foreground block text-[11px] font-medium mb-1">Document Category</span>
+            <span class="font-semibold text-foreground text-sm">{docTypeLabel()}</span>
+          </div>
           <div>
             <span class="text-muted-foreground block text-[11px] font-medium mb-1">Document Recipient</span>
             <span class="font-semibold text-foreground text-sm">{r.recipientName}</span>
           </div>
           <div>
-            <span class="text-muted-foreground block text-[11px] font-medium mb-1">Program / Degree Title</span>
+            <span class="text-muted-foreground block text-[11px] font-medium mb-1">
+              {r.docType === 'PROMOTION' ? 'Promotion Details' : r.docType === 'QUALIFICATION' ? 'Qualification Specialty' : r.docType === 'APPRECIATION' ? 'Honored Occasion' : 'Program / Course'}
+            </span>
             <span class="font-semibold text-foreground text-sm">{r.programTitle}</span>
           </div>
           <div>
             <span class="text-muted-foreground block text-[11px] font-medium mb-1">Issue Date & Validity</span>
-            <span class="font-mono tabular-nums text-foreground">{r.issueDate} • {r.expiryDate || 'Lifetime Credential'}</span>
+            <span class="font-mono tabular-nums text-foreground">{r.issueDate} • {r.expiryDate || 'Official Lifetime Record'}</span>
           </div>
           <div>
-            <span class="text-muted-foreground block text-[11px] font-medium mb-1">Ledger Identifier</span>
-            <span class="font-mono tabular-nums font-semibold text-foreground">{r.id}</span>
+            <span class="text-muted-foreground block text-[11px] font-medium mb-1">Ledger Status</span>
+            <span class="inline-flex items-center gap-1.5 font-semibold text-foreground">
+              <span class={`w-1.5 h-1.5 rounded-full ${r.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              {r.status === 'ACTIVE' ? 'Active / Authentic' : 'Revoked'}
+            </span>
           </div>
         </div>
+
+
 
         <div class="pt-3 border-t border-border/80 space-y-2">
           <div>
@@ -102,6 +128,18 @@ export default function RecordDetails(props: Props) {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Dedicated Window.print() Target Overlay */}
+      <div class="hidden print:block">
+        <PrintablePaper
+          data={r}
+          themeId={r.templateId || 'classic-diploma'}
+          paperSize={r.paperSize || 'A4'}
+          orientation={r.orientation || 'landscape'}
+          includeSignatures={true}
+          isPreview={false}
+        />
       </div>
     </div>
   );

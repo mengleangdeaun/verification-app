@@ -49,6 +49,7 @@ function mapRowToRecord(row: any, appUrl: string): CertificateRecord {
 
   return {
     id,
+    docType: (row.doc_type || 'COMPLETION') as any,
     recipientName: String(row.recipient_name || ''),
     programTitle: String(row.program_title || ''),
     description: String(row.description || ''),
@@ -109,12 +110,13 @@ export async function appendCertToLedger(
     const sql = neon(dbUrl);
     await sql`
       INSERT INTO certificates (
-        id, recipient_name, program_title, description, level,
+        id, doc_type, recipient_name, program_title, description, level,
         issue_date, expiry_date, signatory1_name, signatory1_title,
         signatory2_name, signatory2_title, template_id, paper_size,
         orientation, status, payload_hash, signature, created_at, updated_at
       ) VALUES (
         ${record.id},
+        ${record.docType || 'COMPLETION'},
         ${record.recipientName},
         ${record.programTitle},
         ${record.description},
@@ -135,11 +137,13 @@ export async function appendCertToLedger(
         NOW()
       )
       ON CONFLICT (id) DO UPDATE SET
+        doc_type = EXCLUDED.doc_type,
         status = EXCLUDED.status,
         updated_at = NOW();
     `;
     return;
   }
+
 
   // 2. Legacy Google Sheets Proxy
   const proxyUrl = env?.SHEETS_PROXY_URL?.trim() || process.env.SHEETS_PROXY_URL?.trim();
@@ -232,6 +236,7 @@ export async function updateCertInLedger(
     const sql = neon(dbUrl);
     const result = await sql`
       UPDATE certificates SET
+        doc_type = ${record.docType || 'COMPLETION'},
         recipient_name = ${record.recipientName},
         program_title = ${record.programTitle},
         description = ${record.description},
@@ -257,6 +262,7 @@ export async function updateCertInLedger(
     }
     return mapRowToRecord(result[0], resolveAppUrl(env));
   }
+
 
   // 2. Legacy Google Sheets Proxy
   const proxyUrl = env?.SHEETS_PROXY_URL?.trim() || process.env.SHEETS_PROXY_URL?.trim();
@@ -381,74 +387,52 @@ export async function listCertsFromLedger(
   const offset = (page - 1) * pageSize;
   const search = (params?.search || '').trim();
   const status = (params?.status || 'ALL').toUpperCase();
+  const docType = (params?.docType || 'ALL').toUpperCase();
 
   // 1. Neon Postgres
   if (dbUrl) {
     const sql = neon(dbUrl);
     const searchPattern = search ? `%${search}%` : null;
+    const statusParam = status !== 'ALL' ? status : null;
+    const docTypeParam = docType !== 'ALL' ? docType : null;
 
-    // Fetch Global Metrics in parallel/subquery
+    // Fetch Global Metrics
     const metricsRows = await sql`
       SELECT
         count(*)::int as total,
         count(*) FILTER (WHERE status = 'ACTIVE')::int as active,
-        count(*) FILTER (WHERE status = 'REVOKED')::int as revoked
+        count(*) FILTER (WHERE status = 'REVOKED')::int as revoked,
+        count(*) FILTER (WHERE doc_type = 'COMPLETION')::int as completion,
+        count(*) FILTER (WHERE doc_type = 'QUALIFICATION')::int as qualification,
+        count(*) FILTER (WHERE doc_type = 'APPRECIATION')::int as appreciation,
+        count(*) FILTER (WHERE doc_type = 'PROMOTION')::int as promotion
       FROM certificates;
     `;
     const metrics = {
       total: Number(metricsRows[0]?.total || 0),
       active: Number(metricsRows[0]?.active || 0),
       revoked: Number(metricsRows[0]?.revoked || 0),
+      completion: Number(metricsRows[0]?.completion || 0),
+      qualification: Number(metricsRows[0]?.qualification || 0),
+      appreciation: Number(metricsRows[0]?.appreciation || 0),
+      promotion: Number(metricsRows[0]?.promotion || 0),
     };
 
-    let countRows: any[];
-    let recordRows: any[];
+    const countRows = await sql`
+      SELECT count(*)::int as count FROM certificates
+      WHERE (${searchPattern}::text IS NULL OR id ILIKE ${searchPattern} OR recipient_name ILIKE ${searchPattern} OR program_title ILIKE ${searchPattern})
+        AND (${statusParam}::text IS NULL OR status = ${statusParam}::cert_status)
+        AND (${docTypeParam}::text IS NULL OR doc_type = ${docTypeParam});
+    `;
 
-    if (searchPattern && status !== 'ALL') {
-      countRows = await sql`
-        SELECT count(*)::int as count FROM certificates
-        WHERE (id ILIKE ${searchPattern} OR recipient_name ILIKE ${searchPattern} OR program_title ILIKE ${searchPattern})
-          AND status = ${status}::cert_status;
-      `;
-      recordRows = await sql`
-        SELECT * FROM certificates
-        WHERE (id ILIKE ${searchPattern} OR recipient_name ILIKE ${searchPattern} OR program_title ILIKE ${searchPattern})
-          AND status = ${status}::cert_status
-        ORDER BY created_at DESC
-        LIMIT ${pageSize} OFFSET ${offset};
-      `;
-    } else if (searchPattern) {
-      countRows = await sql`
-        SELECT count(*)::int as count FROM certificates
-        WHERE id ILIKE ${searchPattern} OR recipient_name ILIKE ${searchPattern} OR program_title ILIKE ${searchPattern};
-      `;
-      recordRows = await sql`
-        SELECT * FROM certificates
-        WHERE id ILIKE ${searchPattern} OR recipient_name ILIKE ${searchPattern} OR program_title ILIKE ${searchPattern}
-        ORDER BY created_at DESC
-        LIMIT ${pageSize} OFFSET ${offset};
-      `;
-    } else if (status !== 'ALL') {
-      countRows = await sql`
-        SELECT count(*)::int as count FROM certificates
-        WHERE status = ${status}::cert_status;
-      `;
-      recordRows = await sql`
-        SELECT * FROM certificates
-        WHERE status = ${status}::cert_status
-        ORDER BY created_at DESC
-        LIMIT ${pageSize} OFFSET ${offset};
-      `;
-    } else {
-      countRows = await sql`
-        SELECT count(*)::int as count FROM certificates;
-      `;
-      recordRows = await sql`
-        SELECT * FROM certificates
-        ORDER BY created_at DESC
-        LIMIT ${pageSize} OFFSET ${offset};
-      `;
-    }
+    const recordRows = await sql`
+      SELECT * FROM certificates
+      WHERE (${searchPattern}::text IS NULL OR id ILIKE ${searchPattern} OR recipient_name ILIKE ${searchPattern} OR program_title ILIKE ${searchPattern})
+        AND (${statusParam}::text IS NULL OR status = ${statusParam}::cert_status)
+        AND (${docTypeParam}::text IS NULL OR doc_type = ${docTypeParam})
+      ORDER BY created_at DESC
+      LIMIT ${pageSize} OFFSET ${offset};
+    `;
 
     const filteredTotal = Number(countRows[0]?.count || 0);
     const totalPages = Math.ceil(filteredTotal / pageSize) || 1;
@@ -473,12 +457,12 @@ export async function listCertsFromLedger(
     if (!res.ok) throw new Error(`Sheets proxy LIST failed with HTTP ${res.status}`);
     const body = await res.json();
     const allRecords: CertificateRecord[] = body.data || [];
-    return paginateArray(allRecords, page, pageSize, search, status);
+    return paginateArray(allRecords, page, pageSize, search, status, docType);
   }
 
   // 3. Local Mock JSON Fallback
   const allRecords = ensureMockStorage();
-  return paginateArray(allRecords, page, pageSize, search, status);
+  return paginateArray(allRecords, page, pageSize, search, status, docType);
 }
 
 function paginateArray(
@@ -486,17 +470,25 @@ function paginateArray(
   page: number,
   pageSize: number,
   search: string,
-  status: string
+  status: string,
+  docType: string = 'ALL'
 ): PaginatedCertificatesResult {
   const metrics = {
     total: all.length,
     active: all.filter((c) => c.status === 'ACTIVE').length,
     revoked: all.filter((c) => c.status === 'REVOKED').length,
+    completion: all.filter((c) => (c.docType || 'COMPLETION') === 'COMPLETION').length,
+    qualification: all.filter((c) => c.docType === 'QUALIFICATION').length,
+    appreciation: all.filter((c) => c.docType === 'APPRECIATION').length,
+    promotion: all.filter((c) => c.docType === 'PROMOTION').length,
   };
 
   let filtered = all;
   if (status !== 'ALL') {
     filtered = filtered.filter((c) => c.status === status);
+  }
+  if (docType !== 'ALL') {
+    filtered = filtered.filter((c) => (c.docType || 'COMPLETION') === docType);
   }
   if (search) {
     const q = search.toLowerCase();
@@ -522,3 +514,4 @@ function paginateArray(
     metrics,
   };
 }
+
