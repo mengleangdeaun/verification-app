@@ -62,12 +62,6 @@ export default function StatusBanner(props: Props) {
             </span>
           </div>
           <p class="mt-1 text-sm text-slate-700 leading-relaxed">{c.desc}</p>
-          {props.payloadHash && (
-            <div class="mt-3 flex items-center gap-2 text-xs font-mono text-slate-500 bg-white/70 py-1 px-2.5 border border-slate-200">
-              <span class="font-semibold text-slate-700">SHA-256 Digest:</span>
-              <span class="truncate">{props.payloadHash}</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
