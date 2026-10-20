@@ -221,6 +221,120 @@ export async function updateCertStatusInLedger(
   saveMockStorage(list);
 }
 
+export async function updateCertInLedger(
+  record: CertificateRecord,
+  env?: LedgerEnv
+): Promise<CertificateRecord> {
+  const dbUrl = resolveDatabaseUrl(env);
+
+  // 1. Neon Postgres
+  if (dbUrl) {
+    const sql = neon(dbUrl);
+    const result = await sql`
+      UPDATE certificates SET
+        recipient_name = ${record.recipientName},
+        program_title = ${record.programTitle},
+        description = ${record.description},
+        level = ${record.level},
+        issue_date = ${record.issueDate},
+        expiry_date = ${record.expiryDate || null},
+        signatory1_name = ${record.signatory1Name},
+        signatory1_title = ${record.signatory1Title},
+        signatory2_name = ${record.signatory2Name || null},
+        signatory2_title = ${record.signatory2Title || null},
+        template_id = ${record.templateId},
+        paper_size = ${record.paperSize},
+        orientation = ${record.orientation},
+        status = ${record.status},
+        payload_hash = ${record.payloadHash},
+        signature = ${record.signature},
+        updated_at = NOW()
+      WHERE id = ${record.id}
+      RETURNING *;
+    `;
+    if (!result || result.length === 0) {
+      throw new Error(`Certificate with ID ${record.id} not found in database`);
+    }
+    return mapRowToRecord(result[0], resolveAppUrl(env));
+  }
+
+  // 2. Legacy Google Sheets Proxy
+  const proxyUrl = env?.SHEETS_PROXY_URL?.trim() || process.env.SHEETS_PROXY_URL?.trim();
+  if (proxyUrl) {
+    const res = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'UPDATE_CERT',
+        bearerToken: env?.SHEETS_BEARER_TOKEN || process.env.SHEETS_BEARER_TOKEN,
+        payload: record,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Sheets proxy update failed with HTTP ${res.status}`);
+    }
+    return record;
+  }
+
+  // 3. Local Mock JSON Fallback
+  const list = ensureMockStorage();
+  const idx = list.findIndex((c) => c.id === record.id);
+  if (idx === -1) {
+    throw new Error(`Certificate with ID ${record.id} not found in ledger`);
+  }
+  list[idx] = record;
+  saveMockStorage(list);
+  return record;
+}
+
+export async function deleteCertFromLedger(
+  id: string,
+  env?: LedgerEnv
+): Promise<void> {
+  const dbUrl = resolveDatabaseUrl(env);
+
+  // 1. Neon Postgres
+  if (dbUrl) {
+    const sql = neon(dbUrl);
+    const result = await sql`
+      DELETE FROM certificates
+      WHERE id = ${id}
+      RETURNING id;
+    `;
+    if (!result || result.length === 0) {
+      throw new Error(`Certificate with ID ${id} not found in database`);
+    }
+    return;
+  }
+
+  // 2. Legacy Google Sheets Proxy
+  const proxyUrl = env?.SHEETS_PROXY_URL?.trim() || process.env.SHEETS_PROXY_URL?.trim();
+  if (proxyUrl) {
+    const res = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'DELETE_CERT',
+        bearerToken: env?.SHEETS_BEARER_TOKEN || process.env.SHEETS_BEARER_TOKEN,
+        id,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Sheets proxy delete failed with HTTP ${res.status}`);
+    }
+    return;
+  }
+
+  // 3. Local Mock JSON Fallback
+  const list = ensureMockStorage();
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) {
+    throw new Error(`Certificate with ID ${id} not found in ledger`);
+  }
+  list.splice(idx, 1);
+  saveMockStorage(list);
+}
+
 export async function getCertFromLedger(
   id: string,
   env?: LedgerEnv

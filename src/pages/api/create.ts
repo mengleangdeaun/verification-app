@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { buildCanonicalPayload, type CertificateRecord } from '../../types/certificates';
 import { signCanonicalPayload } from '../../utils/crypto';
-import { appendCertToLedger, updateCertStatusInLedger } from '../../utils/ledger';
+import { appendCertToLedger, updateCertStatusInLedger, updateCertInLedger, deleteCertFromLedger } from '../../utils/ledger';
 import crypto from 'node:crypto';
 
 export const prerender = false;
@@ -129,6 +129,116 @@ export const PATCH: APIRoute = async ({ request }) => {
     });
 
     return new Response(JSON.stringify({ id, status }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err?.message || 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const PUT: APIRoute = async ({ request }) => {
+  if (!checkAuth(request)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    const body = await request.json();
+    const {
+      id, recipientName, programTitle, description, level, issueDate, expiryDate,
+      signatory1Name, signatory1Title, signatory2Name, signatory2Title,
+      templateId, paperSize, orientation, status
+    } = body;
+
+    if (!id || !recipientName || !programTitle || !description || !level || !issueDate ||
+        !signatory1Name || !signatory1Title || !templateId || !paperSize || !orientation) {
+      return new Response(JSON.stringify({ error: 'Missing required certificate fields for update' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const canonical = buildCanonicalPayload({
+      id, recipientName, programTitle, description, level, issueDate,
+      expiryDate: expiryDate || null, signatory1Name, signatory1Title,
+      signatory2Name: signatory2Name || null, signatory2Title: signatory2Title || null,
+    });
+
+    const privKey = process.env.ED25519_PRIVATE_KEY_B64 || import.meta.env.ED25519_PRIVATE_KEY_B64;
+    if (!privKey) {
+      return new Response(JSON.stringify({ error: 'Server Ed25519 private key unconfigured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { signature, payloadHash } = await signCanonicalPayload(canonical, privKey);
+    const appUrl = (process.env.PUBLIC_APP_URL || import.meta.env.PUBLIC_APP_URL || '').replace(/\/+$/, '');
+    const verificationUrl = `${appUrl}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(signature)}`;
+
+    const record: CertificateRecord = {
+      id, recipientName, programTitle, description, level, issueDate,
+      expiryDate: expiryDate || null, signatory1Name, signatory1Title,
+      signatory2Name: signatory2Name || null, signatory2Title: signatory2Title || null,
+      templateId, paperSize, orientation,
+      status: status || 'ACTIVE',
+      payloadHash, signature, verificationUrl,
+    };
+
+    const updated = await updateCertInLedger(record, {
+      DATABASE_URL: process.env.DATABASE_URL || import.meta.env.DATABASE_URL,
+      SHEETS_PROXY_URL: process.env.SHEETS_PROXY_URL || import.meta.env.SHEETS_PROXY_URL,
+      SHEETS_BEARER_TOKEN: process.env.SHEETS_BEARER_TOKEN || import.meta.env.SHEETS_BEARER_TOKEN,
+      PUBLIC_APP_URL: appUrl,
+    });
+
+    return new Response(JSON.stringify(updated), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err?.message || 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const DELETE: APIRoute = async ({ request, url }) => {
+  if (!checkAuth(request)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    let id = url.searchParams.get('id');
+    if (!id) {
+      const body = await request.json().catch(() => ({}));
+      id = body?.id;
+    }
+
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'Missing certificate id for deletion' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    await deleteCertFromLedger(id, {
+      DATABASE_URL: process.env.DATABASE_URL || import.meta.env.DATABASE_URL,
+      SHEETS_PROXY_URL: process.env.SHEETS_PROXY_URL || import.meta.env.SHEETS_PROXY_URL,
+      SHEETS_BEARER_TOKEN: process.env.SHEETS_BEARER_TOKEN || import.meta.env.SHEETS_BEARER_TOKEN,
+    });
+
+    return new Response(JSON.stringify({ success: true, id }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

@@ -10,36 +10,50 @@ import { DatePickerField } from '@/components/date-picker-field';
 import { TextField, TextFieldLabel, TextFieldInput, TextFieldTextArea } from '@/components/text-field';
 
 export default function CreateCertForm() {
-  const { state, setState, resetDraft } = dashboardStore;
-  const { issueCert } = useCreateCert();
+  const { state, setState, resetDraft, cancelEdit } = dashboardStore;
+  const { issueCert, updateCert } = useCreateCert();
   const [errorMsg, setErrorMsg] = createSignal<string | null>(null);
   const [issuedCert, setIssuedCert] = createSignal<CertificateRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
 
+  const isEditing = () => !!state.editingCertId;
+
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
-    if (isSubmitting() || issueCert.isPending) return;
+    if (isSubmitting() || issueCert.isPending || updateCert.isPending) return;
 
     setErrorMsg(null);
     setIsSubmitting(true);
 
     try {
-      const newCert = await issueCert.mutateAsync({
-        ...state.draft,
-        templateId: state.activeTemplateId,
-        paperSize: state.paperSize,
-        orientation: state.orientation,
-      });
-      setIssuedCert(newCert);
+      let resultCert: CertificateRecord;
+      if (isEditing()) {
+        resultCert = await updateCert.mutateAsync({
+          id: state.editingCertId!,
+          ...state.draft,
+          status: state.editingCertStatus || 'ACTIVE',
+          templateId: state.activeTemplateId,
+          paperSize: state.paperSize,
+          orientation: state.orientation,
+        });
+      } else {
+        resultCert = await issueCert.mutateAsync({
+          ...state.draft,
+          templateId: state.activeTemplateId,
+          paperSize: state.paperSize,
+          orientation: state.orientation,
+        });
+      }
+      setIssuedCert(resultCert);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to issue certificate');
+      setErrorMsg(err.message || 'Failed to save certificate');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleIssueAnother = () => {
-    resetDraft();
+    cancelEdit();
     setIssuedCert(null);
     setErrorMsg(null);
   };
@@ -50,6 +64,7 @@ export default function CreateCertForm() {
       fallback={
         <IssuanceSuccessCard
           cert={issuedCert()!}
+          isUpdate={isEditing()}
           onPrint={() => dashboardStore.selectCertForPrint(issuedCert()!)}
           onIssueAnother={handleIssueAnother}
         />
@@ -58,14 +73,45 @@ export default function CreateCertForm() {
       <Card class="shadow-xs border-border">
         <CardHeader class="flex flex-row items-center justify-between pb-4 border-b border-border">
           <div>
-            <CardTitle class="text-base font-semibold text-foreground">Certificate Credential Details</CardTitle>
-            <CardDescription class="text-xs text-muted-foreground mt-0.5">All fields are cryptographically signed into the canonical ledger</CardDescription>
+            <div class="flex items-center gap-2">
+              <CardTitle class="text-base font-semibold text-foreground">
+                {isEditing() ? 'Edit Certificate Credential' : 'Certificate Credential Details'}
+              </CardTitle>
+              <Show when={isEditing()}>
+                <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                  Editing: {state.editingCertId}
+                </span>
+              </Show>
+            </div>
+            <CardDescription class="text-xs text-muted-foreground mt-0.5">
+              {isEditing()
+                ? 'Live edits reflect on the preview template. Saving will re-sign the ledger.'
+                : 'All fields are cryptographically signed into the canonical ledger'}
+            </CardDescription>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={resetDraft} disabled={isSubmitting()}>Reset</Button>
+          <div class="flex items-center gap-2">
+            <Show
+              when={isEditing()}
+              fallback={
+                <Button type="button" variant="ghost" size="sm" onClick={resetDraft} disabled={isSubmitting()}>Reset</Button>
+              }
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={cancelEdit}
+                disabled={isSubmitting()}
+                class="text-xs text-amber-700 border-amber-300 hover:bg-amber-50 cursor-pointer"
+              >
+                Cancel Edit
+              </Button>
+            </Show>
+          </div>
         </CardHeader>
         <CardContent class="p-6 pt-5">
           <form onSubmit={handleSubmit}>
-            <fieldset disabled={isSubmitting() || issueCert.isPending} class="space-y-5">
+            <fieldset disabled={isSubmitting() || issueCert.isPending || updateCert.isPending} class="space-y-5">
               {errorMsg() && (
                 <div class="p-3 text-xs text-destructive bg-destructive/10 border border-destructive/20 flex items-start justify-between gap-3">
                   <span>{errorMsg()}</span>
@@ -108,21 +154,29 @@ export default function CreateCertForm() {
 
               <Button
                 type="submit"
-                disabled={isSubmitting() || issueCert.isPending}
+                disabled={isSubmitting() || issueCert.isPending || updateCert.isPending}
                 variant="default"
                 size="lg"
                 class="w-full text-xs font-semibold h-10 mt-6 gap-2 transition-[filter,background-color,transform] duration-150 ease-out"
               >
                 <Show
-                  when={isSubmitting() || issueCert.isPending}
-                  fallback={<span class="transition-[filter,opacity] duration-180 ease-out">Sign & Issue Certificate to Ledger</span>}
+                  when={isSubmitting() || issueCert.isPending || updateCert.isPending}
+                  fallback={
+                    <span class="transition-[filter,opacity] duration-180 ease-out">
+                      {isEditing() ? 'Update & Re-sign Certificate to Ledger' : 'Sign & Issue Certificate to Ledger'}
+                    </span>
+                  }
                 >
                   <span class="inline-flex items-center gap-2 transition-[filter,opacity] duration-180 ease-out">
                     <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    <span>Cryptographically Signing & Writing to Ledger...</span>
+                    <span>
+                      {isEditing()
+                        ? 'Cryptographically Re-signing & Updating Ledger...'
+                        : 'Cryptographically Signing & Writing to Ledger...'}
+                    </span>
                   </span>
                 </Show>
               </Button>

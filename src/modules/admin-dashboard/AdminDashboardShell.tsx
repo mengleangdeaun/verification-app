@@ -68,7 +68,19 @@ export default function AdminDashboardShell() {
     triggerCertificatePrint(state.paperSize, state.orientation);
   };
 
-  const previewData = () => state.selectedCert || state.draft;
+  const previewData = () => {
+    if (state.selectedCert) return state.selectedCert;
+    if (state.editingCertId) {
+      return {
+        ...state.draft,
+        id: state.editingCertId,
+        templateId: state.activeTemplateId,
+        paperSize: state.paperSize,
+        orientation: state.orientation,
+      };
+    }
+    return state.draft;
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -190,6 +202,7 @@ export default function AdminDashboardShell() {
               <DataGridTable
                 onSelectForPrint={() => setActiveTab('studio')}
                 onNewCertClick={() => setActiveTab('studio')}
+                onEditCertClick={() => setActiveTab('studio')}
               />
             </Show>
 
@@ -206,14 +219,29 @@ export default function AdminDashboardShell() {
                 <div class="xl:col-span-7 flex flex-col items-center justify-start bg-slate-200/50 p-6 border border-border shadow-inner">
                   <div class="w-full flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                      <span class="text-xs font-bold uppercase tracking-wider text-foreground">Live Print Canvas Preview</span>
+                      <span class="text-xs font-bold uppercase tracking-wider text-foreground">
+                        {state.editingCertId ? 'Live Editing Canvas Preview' : 'Live Print Canvas Preview'}
+                      </span>
+                      <Show when={state.editingCertId}>
+                        <Badge variant="outline" class="text-[10px] bg-amber-50 text-amber-700 border-amber-300 font-mono">
+                          {state.editingCertId}
+                        </Badge>
+                      </Show>
                       <Badge variant="outline" class="font-mono text-[10px]">
                         {state.paperSize} • {state.orientation}
                       </Badge>
                     </div>
 
                     <div class="flex items-center gap-2">
-                      {state.selectedCert && (
+                      {state.editingCertId ? (
+                        <button
+                          type="button"
+                          onClick={dashboardStore.cancelEdit}
+                          class="text-xs text-amber-700 hover:underline font-semibold cursor-pointer"
+                        >
+                          &larr; Cancel Edit & Switch to New
+                        </button>
+                      ) : state.selectedCert ? (
                         <button
                           type="button"
                           onClick={() => setState('selectedCert', null)}
@@ -221,7 +249,7 @@ export default function AdminDashboardShell() {
                         >
                           &larr; Switch Back to Current Draft
                         </button>
-                      )}
+                      ) : null}
                       <Button variant="default" size="sm" onClick={handlePrint} class="text-xs font-semibold">
                         Print Document
                       </Button>

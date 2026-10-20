@@ -10,6 +10,11 @@ export interface CreateCertificateInput {
   templateId: TemplateId; paperSize: PaperSize; orientation: PaperOrientation;
 }
 
+export interface UpdateCertificateInput extends Partial<CreateCertificateInput> {
+  id: string;
+  status?: CertificateStatus;
+}
+
 export interface CertificateRecord extends CreateCertificateInput {
   id: string; status: CertificateStatus; payloadHash: string; signature: string; verificationUrl: string;
 }

@@ -6,6 +6,7 @@ import { Badge } from '@/components/badge';
 
 interface Props {
   cert: CertificateRecord;
+  isUpdate?: boolean;
   onPrint: () => void;
   onIssueAnother: () => void;
 }
@@ -31,10 +32,14 @@ export default function IssuanceSuccessCard(props: Props) {
             </div>
             <div>
               <CardTitle class="text-base font-semibold text-emerald-700 dark:text-emerald-400">
-                Certificate Issued & Cryptographically Signed
+                {props.isUpdate
+                  ? 'Certificate Updated & Cryptographically Re-signed'
+                  : 'Certificate Issued & Cryptographically Signed'}
               </CardTitle>
               <CardDescription class="text-xs text-muted-foreground mt-0.5">
-                Permanently written to the Neon ledger and ready for distribution
+                {props.isUpdate
+                  ? 'Permanently updated in the ledger with verified digital signature'
+                  : 'Permanently written to the Neon ledger and ready for distribution'}
               </CardDescription>
             </div>
           </div>
@@ -92,7 +97,7 @@ export default function IssuanceSuccessCard(props: Props) {
           </a>
 
           <Button variant="ghost" size="sm" onClick={props.onIssueAnother} class="text-xs ml-auto">
-            + Issue Another Certificate
+            {props.isUpdate ? 'Done / Back to Studio' : '+ Issue Another Certificate'}
           </Button>
         </div>
       </CardContent>

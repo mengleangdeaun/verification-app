@@ -28,6 +28,31 @@ export function useCreateCert() {
     },
   }));
 
+  const updateCert = createMutation(() => ({
+    mutationFn: async (payload: CertificateRecord | (CreateCertificateInput & { id: string; status?: string })): Promise<CertificateRecord> => {
+      const res = await fetch('/api/create', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${dashboardStore.state.adminToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Update failed with HTTP ${res.status}`);
+      }
+      return res.json();
+    },
+    onSuccess: (updatedCert) => {
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      if (dashboardStore.state.selectedCert?.id === updatedCert.id) {
+        dashboardStore.selectCertForPrint(updatedCert);
+      }
+    },
+  }));
+
   const updateStatus = createMutation(() => ({
     mutationFn: async ({ id, status }: { id: string; status: 'ACTIVE' | 'REVOKED' }) => {
       const res = await fetch('/api/create', {
@@ -50,5 +75,30 @@ export function useCreateCert() {
     },
   }));
 
-  return { issueCert, updateStatus };
+  const deleteCert = createMutation(() => ({
+    mutationFn: async ({ id }: { id: string }) => {
+      const res = await fetch('/api/create', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${dashboardStore.state.adminToken}`,
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Delete failed with HTTP ${res.status}`);
+      }
+      return res.json();
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      if (dashboardStore.state.selectedCert?.id === id) {
+        dashboardStore.setState('selectedCert', null);
+      }
+    },
+  }));
+
+  return { issueCert, updateCert, updateStatus, deleteCert };
 }

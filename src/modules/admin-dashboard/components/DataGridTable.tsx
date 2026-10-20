@@ -23,6 +23,7 @@ import { TextField, TextFieldInput } from '@/components/text-field';
 interface Props {
   onSelectForPrint?: (cert: CertificateRecord) => void;
   onNewCertClick?: () => void;
+  onEditCertClick?: (cert: CertificateRecord) => void;
 }
 
 export default function DataGridTable(props: Props) {
@@ -33,6 +34,7 @@ export default function DataGridTable(props: Props) {
   const [debouncedSearch, setDebouncedSearch] = createSignal(state.searchFilter);
   const [copiedId, setCopiedId] = createSignal<string | null>(null);
   const [revokeTarget, setRevokeTarget] = createSignal<CertificateRecord | null>(null);
+  const [deleteTarget, setDeleteTarget] = createSignal<CertificateRecord | null>(null);
 
   // 300ms Debounce search input to avoid spamming the database
   let debounceTimer: any;
@@ -57,7 +59,7 @@ export default function DataGridTable(props: Props) {
     status: statusFilter,
   });
 
-  const { updateStatus } = useCreateCert();
+  const { updateStatus, deleteCert } = useCreateCert();
   const queryClient = useQueryClient();
 
   // Prefetch Next Page into TanStack Query Cache for Instant Pagination
@@ -108,6 +110,13 @@ export default function DataGridTable(props: Props) {
     const nextStatus = cert.status === 'ACTIVE' ? 'REVOKED' : 'ACTIVE';
     await updateStatus.mutateAsync({ id: cert.id, status: nextStatus });
     setRevokeTarget(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    const cert = deleteTarget();
+    if (!cert) return;
+    await deleteCert.mutateAsync({ id: cert.id });
+    setDeleteTarget(null);
   };
 
   const getInitials = (name: string) => {
@@ -409,6 +418,25 @@ export default function DataGridTable(props: Props) {
                           <TooltipContent side="top">Open live print canvas preview</TooltipContent>
                         </Tooltip>
 
+                        <Tooltip position="top">
+                          <TooltipTrigger
+                            as={Button}
+                            variant="outline"
+                            size="xs"
+                            class="font-medium gap-1 text-foreground hover:bg-muted"
+                            onClick={() => {
+                              dashboardStore.loadCertForEdit(cert);
+                              if (props.onEditCertClick) props.onEditCertClick(cert);
+                            }}
+                          >
+                            <svg class="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            <span>Edit</span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Edit in studio with live preview</TooltipContent>
+                        </Tooltip>
+
                         <Button
                           variant={cert.status === 'ACTIVE' ? 'destructive' : 'outline'}
                           size="xs"
@@ -433,6 +461,21 @@ export default function DataGridTable(props: Props) {
                             </svg>
                           </TooltipTrigger>
                           <TooltipContent side="left">Open public view in new tab</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip position="top">
+                          <TooltipTrigger
+                            as={Button}
+                            variant="ghost"
+                            size="xs"
+                            class="text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2"
+                            onClick={() => setDeleteTarget(cert)}
+                          >
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Delete from ledger</TooltipContent>
                         </Tooltip>
                       </div>
                     </TableCell>
@@ -461,7 +504,7 @@ export default function DataGridTable(props: Props) {
         </Show>
       </Card>
 
-      {/* Accessible Kobalte Confirmation Dialog */}
+      {/* Accessible Kobalte Confirmation Dialog for Revoke/Restore */}
       <AlertDialog open={!!revokeTarget()} onOpenChange={(open) => !open && setRevokeTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -495,6 +538,38 @@ export default function DataGridTable(props: Props) {
                 : revokeTarget()?.status === 'ACTIVE'
                 ? 'Confirm Revocation'
                 : 'Confirm Restoration'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Accessible Kobalte Confirmation Dialog for Permanent Deletion */}
+      <AlertDialog open={!!deleteTarget()} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle class="text-destructive flex items-center gap-2">
+              <svg class="w-5 h-5 text-destructive shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Permanently Delete Certificate?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete certificate <strong class="font-mono text-foreground">{deleteTarget()?.id}</strong> issued to <strong class="text-foreground">{deleteTarget()?.recipientName}</strong>?
+              <br /><br />
+              <span class="text-rose-600 font-semibold">This action cannot be undone.</span> The cryptographic record will be permanently purged from the database and public verification will return <em>RECORD_NOT_FOUND</em>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={deleteCert.isPending}
+              onClick={handleConfirmDelete}
+            >
+              {deleteCert.isPending ? 'Purging from Ledger...' : 'Delete Permanently'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
