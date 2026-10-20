@@ -19,7 +19,7 @@ import {
 } from '@/components/alert-dialog';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/tooltip';
 import { TextField, TextFieldInput } from '@/components/text-field';
-import { apiUrl } from '../../../utils/paths';
+import { apiUrl, getRelativeVerificationUrl } from '../../../utils/paths';
 
 interface Props {
   onSelectForPrint?: (cert: CertificateRecord) => void;
@@ -498,7 +498,7 @@ export default function DataGridTable(props: Props) {
                         <Tooltip position="top">
                           <TooltipTrigger
                             as="a"
-                            href={cert.verificationUrl}
+                            href={getRelativeVerificationUrl(cert.verificationUrl, cert.id, cert.signature)}
                             target="_blank"
                             rel="noreferrer"
                             class="inline-flex items-center h-8 gap-1 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent border border-input transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.97]"

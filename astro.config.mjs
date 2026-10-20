@@ -1,5 +1,5 @@
 import { defineConfig } from 'astro/config';
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 import solidJs from '@astrojs/solid-js';
 
 // https://astro.build/config
@@ -8,8 +8,6 @@ export default defineConfig({
   base: '/certification',
   trailingSlash: 'never',
   output: 'server',
-  adapter: node({
-    mode: 'standalone',
-  }),
+  adapter: vercel(),
   integrations: [solidJs()],
 });

@@ -3,6 +3,7 @@ import type { CertificateRecord } from '../../../types/certificates';
 import { Button } from '@/components/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/card';
 import { Badge } from '@/components/badge';
+import { getRelativeVerificationUrl } from '../../../utils/paths';
 
 interface Props {
   cert: CertificateRecord;
@@ -85,7 +86,7 @@ export default function IssuanceSuccessCard(props: Props) {
           </Button>
 
           <a
-            href={props.cert.verificationUrl}
+            href={getRelativeVerificationUrl(props.cert.verificationUrl, props.cert.id, props.cert.signature)}
             target="_blank"
             rel="noreferrer"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-input bg-background hover:bg-accent text-foreground transition-colors"

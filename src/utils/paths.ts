@@ -41,3 +41,27 @@ export function buildVerificationUrl(baseUrlConfig: string | undefined, id: stri
   
   return `${root}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(signature)}`;
 }
+
+/**
+ * Normalizes any verification URL (even if stored with an old or different origin like localhost:4321)
+ * into a relative path starting with the app base (e.g. `/certification/check?id=...&sig=...`),
+ * ensuring browser links always stay on the current domain and port (port 3000 in dev, production domain on Vercel).
+ */
+export function getRelativeVerificationUrl(rawUrl: string, id?: string, signature?: string): string {
+  const base = getAppBase();
+  if (rawUrl) {
+    try {
+      const parsed = new URL(rawUrl, 'http://localhost');
+      let path = parsed.pathname;
+      if (!path.startsWith(base)) {
+        path = `${base}${path.startsWith('/') ? path : `/${path}`}`;
+      }
+      return `${path}${parsed.search}${parsed.hash}`;
+    } catch {}
+  }
+  if (id && signature) {
+    return `${base}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(signature)}`;
+  }
+  return rawUrl || `${base}/check`;
+}
+
