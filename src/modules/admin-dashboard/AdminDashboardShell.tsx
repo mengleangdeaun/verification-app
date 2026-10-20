@@ -11,6 +11,7 @@ import { Badge } from '@/components/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/tabs';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/tooltip';
+import { apiUrl, assetUrl } from '../../utils/paths';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,7 +41,7 @@ export default function AdminDashboardShell() {
     setIsVerifyingKey(true);
 
     try {
-      const res = await fetch('/api/verify?list=true&page=1&pageSize=1', {
+      const res = await fetch(apiUrl('/api/verify?list=true&page=1&pageSize=1'), {
         headers: { Authorization: `Bearer ${entered}` },
       });
 
@@ -91,7 +92,7 @@ export default function AdminDashboardShell() {
             <Card class="w-full max-w-md border-border">
               <CardHeader class="text-center pb-4">
                 <div class="h-16 w-16 mx-auto mb-3 p-2 bg-white border border-border shadow-xs flex items-center justify-center">
-                  <img src="/assets/logo.svg" alt="Emblem" class="h-12 w-12 object-contain" />
+                  <img src={assetUrl('/assets/logo.svg')} alt="Emblem" class="h-12 w-12 object-contain" />
                 </div>
                 <CardTitle class="text-xl font-bold font-serif text-foreground">Registrar Authorization</CardTitle>
                 <CardDescription>Enter Master Admin API Secret to unlock ledger operations</CardDescription>
@@ -145,7 +146,7 @@ export default function AdminDashboardShell() {
               {/* Left: Branding & Status Badge */}
               <div class="flex items-center gap-3.5">
                 <div class="h-10 w-10 p-1.5 bg-white border border-border shadow-xs flex items-center justify-center">
-                  <img src="/assets/logo.svg" alt="Emblem" class="h-full w-full object-contain" />
+                  <img src={assetUrl('/assets/logo.svg')} alt="Emblem" class="h-full w-full object-contain" />
                 </div>
                 <div>
                   <div class="flex items-center gap-2">

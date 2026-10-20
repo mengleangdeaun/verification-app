@@ -3,6 +3,7 @@ import type { CertificateRecord, CreateCertificateInput } from '../../../types/c
 import type { PaperOrientation, PaperSize, TemplateId } from '../../../types/templates';
 import { PAPER_GEOMETRIES, THEMES } from '../constants/themes';
 import VectorQrCode from './VectorQrCode';
+import { assetUrl } from '../../../utils/paths';
 
 interface Props {
   data: Partial<CertificateRecord> | Partial<CreateCertificateInput>;
@@ -93,7 +94,7 @@ export default function PrintablePaper(props: Props) {
         <div class={`flex items-center justify-between border-b border-current/15 ${props.isPreview ? 'pb-3.5' : 'pb-4'}`}>
           <div class="flex items-center">
             <img
-              src="/assets/logo.svg"
+              src={assetUrl('/assets/logo.svg')}
               alt="Emblem"
               class={`logo-img ${props.isPreview ? 'h-16' : 'h-20'} w-auto object-contain shrink-0 block`}
               style={{ height: props.isPreview ? '64px' : '78px', width: 'auto' }}
@@ -146,7 +147,7 @@ export default function PrintablePaper(props: Props) {
           <div class={`signature-col ${props.isPreview ? 'w-40 sm:w-44' : 'w-52'} text-center`}>
             <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center pb-1`}>
               <img
-                src="/assets/sig-1.svg"
+                src={assetUrl('/assets/sig-1.svg')}
                 alt="Signature 1"
                 class={`signature-img ${props.isPreview ? 'h-12' : 'h-14'} max-w-full object-contain transition-opacity duration-200 ${
                   props.includeSignatures ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -170,7 +171,7 @@ export default function PrintablePaper(props: Props) {
               <>
                 <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center pb-1`}>
                   <img
-                    src="/assets/sig-2.svg"
+                    src={assetUrl('/assets/sig-2.svg')}
                     alt="Signature 2"
                     class={`signature-img ${props.isPreview ? 'h-12' : 'h-14'} max-w-full object-contain transition-opacity duration-200 ${
                       props.includeSignatures ? 'opacity-100' : 'opacity-0 pointer-events-none'

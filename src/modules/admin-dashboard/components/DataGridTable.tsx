@@ -19,6 +19,7 @@ import {
 } from '@/components/alert-dialog';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/tooltip';
 import { TextField, TextFieldInput } from '@/components/text-field';
+import { apiUrl } from '../../../utils/paths';
 
 interface Props {
   onSelectForPrint?: (cert: CertificateRecord) => void;
@@ -89,7 +90,7 @@ export default function DataGridTable(props: Props) {
         .query({
           queryKey: ['certificates', token, nextPage, pageSize(), debouncedSearch(), statusFilter(), docTypeFilter()],
           queryFn: async () => {
-            const res = await fetch(`/api/verify?${params.toString()}`, {
+            const res = await fetch(apiUrl(`/api/verify?${params.toString()}`), {
               headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);

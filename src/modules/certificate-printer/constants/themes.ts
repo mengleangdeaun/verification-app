@@ -11,6 +11,9 @@ export const PAPER_GEOMETRIES: Record<PaperSize, Record<PaperOrientation, PrintG
   },
 };
 
+const baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) ? import.meta.env.BASE_URL : '/';
+const defaultSealAsset = `${baseUrl.replace(/\/$/, '')}/assets/seal.svg`;
+
 export const THEMES: Record<TemplateId, TemplateThemeConfig> = {
   'classic-diploma': {
     id: 'classic-diploma',
@@ -20,7 +23,7 @@ export const THEMES: Record<TemplateId, TemplateThemeConfig> = {
     bgClass: 'bg-[#fdfcf7] text-slate-900',
     accentColorHex: '#b45309',
     fontFamilyHeading: 'font-serif',
-    sealAssetPath: '/assets/seal.svg',
+    sealAssetPath: defaultSealAsset,
   },
   'modern-tech': {
     id: 'modern-tech',
@@ -30,7 +33,7 @@ export const THEMES: Record<TemplateId, TemplateThemeConfig> = {
     bgClass: 'bg-white text-slate-900',
     accentColorHex: '#0891b2',
     fontFamilyHeading: 'font-sans',
-    sealAssetPath: '/assets/seal.svg',
+    sealAssetPath: defaultSealAsset,
   },
   'iso-compliance': {
     id: 'iso-compliance',
@@ -40,6 +43,6 @@ export const THEMES: Record<TemplateId, TemplateThemeConfig> = {
     bgClass: 'bg-white text-slate-900',
     accentColorHex: '#1d4ed8',
     fontFamilyHeading: 'font-sans',
-    sealAssetPath: '/assets/seal.svg',
+    sealAssetPath: defaultSealAsset,
   },
 };

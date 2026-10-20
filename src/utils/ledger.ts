@@ -2,6 +2,7 @@ import type { CertificateRecord, PaginationParams, PaginatedCertificatesResult }
 import { neon } from '@neondatabase/serverless';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { buildVerificationUrl } from './paths';
 
 const MOCK_FILE_PATH = path.resolve(process.cwd(), 'data', 'mock-ledger.json');
 
@@ -66,7 +67,7 @@ function mapRowToRecord(row: any, appUrl: string): CertificateRecord {
     status: (row.status || 'ACTIVE') as any,
     payloadHash: String(row.payload_hash || ''),
     signature: sig,
-    verificationUrl: `${appUrl}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(sig)}`,
+    verificationUrl: buildVerificationUrl(appUrl, id, sig),
   };
 }
 

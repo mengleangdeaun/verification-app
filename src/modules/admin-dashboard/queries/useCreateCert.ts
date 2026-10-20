@@ -1,13 +1,14 @@
 import { createMutation, useQueryClient } from '@tanstack/solid-query';
 import type { CertificateRecord, CreateCertificateInput } from '../../../types/certificates';
 import { dashboardStore } from '../stores/dashboardStore';
+import { apiUrl } from '../../../utils/paths';
 
 export function useCreateCert() {
   const queryClient = useQueryClient();
 
   const issueCert = createMutation(() => ({
     mutationFn: async (payload: CreateCertificateInput): Promise<CertificateRecord> => {
-      const res = await fetch('/api/create', {
+      const res = await fetch(apiUrl('/api/create'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,7 +31,7 @@ export function useCreateCert() {
 
   const updateCert = createMutation(() => ({
     mutationFn: async (payload: CertificateRecord | (CreateCertificateInput & { id: string; status?: string })): Promise<CertificateRecord> => {
-      const res = await fetch('/api/create', {
+      const res = await fetch(apiUrl('/api/create'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +56,7 @@ export function useCreateCert() {
 
   const updateStatus = createMutation(() => ({
     mutationFn: async ({ id, status }: { id: string; status: 'ACTIVE' | 'REVOKED' }) => {
-      const res = await fetch('/api/create', {
+      const res = await fetch(apiUrl('/api/create'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +78,7 @@ export function useCreateCert() {
 
   const deleteCert = createMutation(() => ({
     mutationFn: async ({ id }: { id: string }) => {
-      const res = await fetch('/api/create', {
+      const res = await fetch(apiUrl('/api/create'), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

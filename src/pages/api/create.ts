@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { buildCanonicalPayload, type CertificateRecord } from '../../types/certificates';
 import { signCanonicalPayload } from '../../utils/crypto';
 import { appendCertToLedger, updateCertStatusInLedger, updateCertInLedger, deleteCertFromLedger } from '../../utils/ledger';
+import { buildVerificationUrl } from '../../utils/paths';
 import crypto from 'node:crypto';
 
 export const prerender = false;
@@ -83,7 +84,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const { signature, payloadHash } = await signCanonicalPayload(canonical, privKey);
     const appUrl = (process.env.PUBLIC_APP_URL || import.meta.env.PUBLIC_APP_URL || '').replace(/\/+$/, '');
-    const verificationUrl = `${appUrl}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(signature)}`;
+    const verificationUrl = buildVerificationUrl(appUrl, id, signature);
 
     const record: CertificateRecord = {
       id, docType, recipientName, programTitle, description, level, issueDate,
@@ -186,7 +187,7 @@ export const PUT: APIRoute = async ({ request }) => {
 
     const { signature, payloadHash } = await signCanonicalPayload(canonical, privKey);
     const appUrl = (process.env.PUBLIC_APP_URL || import.meta.env.PUBLIC_APP_URL || '').replace(/\/+$/, '');
-    const verificationUrl = `${appUrl}/check?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(signature)}`;
+    const verificationUrl = buildVerificationUrl(appUrl, id, signature);
 
     const record: CertificateRecord = {
       id, docType, recipientName, programTitle, description, level, issueDate,

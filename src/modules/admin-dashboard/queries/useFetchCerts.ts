@@ -1,6 +1,7 @@
 import { createQuery, keepPreviousData } from '@tanstack/solid-query';
 import type { DocumentType, PaginatedCertificatesResult } from '../../../types/certificates';
 import { dashboardStore } from '../stores/dashboardStore';
+import { apiUrl } from '../../../utils/paths';
 
 export interface UseFetchCertsOptions {
   page?: () => number;
@@ -42,7 +43,7 @@ export function useFetchCerts(options?: UseFetchCertsOptions) {
       });
 
 
-      const res = await fetch(`/api/verify?${params.toString()}`, {
+      const res = await fetch(apiUrl(`/api/verify?${params.toString()}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
