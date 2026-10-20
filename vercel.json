@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/certification",
+      "destination": "/"
+    },
+    {
+      "source": "/certification/:path*",
+      "destination": "/:path*"
+    }
+  ]
+}
