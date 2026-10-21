@@ -45,11 +45,12 @@ export default function RecordDetails(props: Props) {
 
   const handleShare = async () => {
     const url = r().verificationUrl || window.location.href;
+    const docType = docTypeLabel();
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Verified Certificate: ${r().recipientName}`,
-          text: `Official verifiable credential for ${r().recipientName} — ${r().programTitle}`,
+          title: `${docType}: ${r().recipientName}`,
+          text: `Official verifiable credential for ${r().recipientName} — ${r().programTitle}. Confirmed authentic against registry.`,
           url,
         });
       } catch (e) {

@@ -27,10 +27,39 @@ if (!security.allowed) {
     timestamp: new Date().toISOString(),
   };
 } else {
-  result = await verifyCertificate(id, sig);
+    result = await verifyCertificate(id, sig);
+}
+
+// Compute Dynamic Open Graph & Social Share Metadata
+const canonicalUrl = `https://scc-group.asia/certification/check${id && sig ? `?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(sig)}` : ''}`;
+let ogTitle = `Verification: ${id || 'Certificate Check'}`;
+let ogDesc = 'Authenticate official verifiable credentials directly against the registry.';
+let ogImage = 'https://scc-group.asia/certification/api/og.png';
+
+if (id && sig) {
+  ogImage = `https://scc-group.asia/certification/api/og.png?id=${encodeURIComponent(id)}&sig=${encodeURIComponent(sig)}`;
+}
+
+if (result.record) {
+  const r = result.record;
+  const docTypeLabel = r.docType === 'PROMOTION' ? 'Letter of Promotion'
+    : r.docType === 'QUALIFICATION' ? 'Certificate of Qualification'
+    : r.docType === 'APPRECIATION' ? 'Letter of Appreciation'
+    : 'Certificate of Completion';
+
+  ogTitle = `${docTypeLabel}: ${r.recipientName}`;
+  ogDesc = `Official verifiable credential for ${r.recipientName} — ${r.programTitle}. Confirmed authentic against the registry.`;
+} else if (result.code === 'RATE_LIMITED') {
+  ogTitle = 'Verification Limit Exceeded';
+  ogDesc = 'Too many verification attempts were made in a short time. Please wait a moment.';
 }
 ---
-<Layout title={`Verification: ${id || 'Certificate Check'}`}>
+<Layout
+  title={ogTitle}
+  description={ogDesc}
+  ogImage={ogImage}
+  canonicalUrl={canonicalUrl}
+>
   {/* Public Brand & Trust Navigation Header */}
   <header class="w-full bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-30 no-print">
     <div class="max-w-4xl mx-auto px-3 py-3 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4">

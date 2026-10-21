@@ -50,13 +50,16 @@ async function runTests() {
   console.log('Verification URL:', cert.verificationUrl);
 
   console.log('\n--- 2. Testing GET /api/verify (Single Valid Cert) ---');
-  const verifyRes = await fetch('http://localhost:4321/api/verify?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(cert.signature));
+  const testHeaders = { Authorization: 'Bearer ' + adminSecret };
+  const verifyRes = await fetch('http://localhost:4321/api/verify?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(cert.signature), {
+    headers: testHeaders,
+  });
   console.log('Verify HTTP status:', verifyRes.status);
   const verifyData = await verifyRes.json();
   console.log('Verification outcome:', verifyData.code, 'Valid:', verifyData.valid);
 
   console.log('\n--- 2b. Testing Active SSR /check Page Content ---');
-  const activePageRes = await fetch(cert.verificationUrl);
+  const activePageRes = await fetch(cert.verificationUrl, { headers: testHeaders });
   console.log('Active Page HTTP status:', activePageRes.status);
   const activeHtml = await activePageRes.text();
   console.log('Contains recipient name (Sokha Chan):', activeHtml.includes('Sokha Chan'));
@@ -68,7 +71,9 @@ async function runTests() {
 
   console.log('\n--- 3. Testing Tamper Detection ---');
   const badSig = cert.signature.slice(0, -2) + 'AA';
-  const tamperRes = await fetch('http://localhost:4321/api/verify?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(badSig));
+  const tamperRes = await fetch('http://localhost:4321/api/verify?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(badSig), {
+    headers: testHeaders,
+  });
   console.log('Tamper HTTP status:', tamperRes.status);
   const tamperData = await tamperRes.json();
   console.log('Tamper outcome:', tamperData.code);
@@ -85,12 +90,14 @@ async function runTests() {
   console.log('Revoke HTTP status:', revokeRes.status);
 
   console.log('\n--- 5. Testing GET /api/verify after Revocation ---');
-  const checkRevokedRes = await fetch('http://localhost:4321/api/verify?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(cert.signature));
+  const checkRevokedRes = await fetch('http://localhost:4321/api/verify?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(cert.signature), {
+    headers: testHeaders,
+  });
   const checkRevokedData = await checkRevokedRes.json();
   console.log('Revocation check outcome:', checkRevokedData.code, 'Status:', checkRevokedData.record?.status);
 
   console.log('\n--- 6. Testing SSR /check Page Content ---');
-  const pageRes = await fetch(cert.verificationUrl);
+  const pageRes = await fetch(cert.verificationUrl, { headers: testHeaders });
   console.log('Page HTTP status:', pageRes.status);
   const html = await pageRes.text();
   console.log('Contains revoked alert:', html.includes('REVOKED'));
@@ -146,6 +153,27 @@ async function runTests() {
     headers: { 'X-Forwarded-For': formatTestIp },
   });
   console.log('Letter of Appreciation format passed proactive check:', loaFormatRes.status !== 400);
+
+  console.log('\n--- 10. Testing Dynamic Vercel OG Image Generation & Social Meta Tags ---');
+  const freshClientIp = '198.51.100.88';
+  // Test 10a: Dynamic Certificate OG Image generation
+  const ogRes = await fetch('http://localhost:4321/certification/api/og.png?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(cert.signature), {
+    headers: { 'X-Forwarded-For': freshClientIp },
+  });
+  console.log('OG Image endpoint status (expected 200):', ogRes.status);
+  console.log('OG Content-Type (expected image/png):', ogRes.headers.get('content-type'));
+  const ogBuf = await ogRes.arrayBuffer();
+  console.log('OG Image size bytes:', ogBuf.byteLength, 'Valid PNG:', ogBuf.byteLength > 10000);
+
+  // Test 10b: SSR /check page Open Graph tags verification
+  const pageCheckRes = await fetch('http://localhost:4321/certification/check?id=' + encodeURIComponent(cert.id) + '&sig=' + encodeURIComponent(cert.signature), {
+    headers: { 'X-Forwarded-For': freshClientIp },
+  });
+  const pageHtml = await pageCheckRes.text();
+  const hasOgImage = pageHtml.includes('property="og:image"') && pageHtml.includes('/certification/api/og.png?id=');
+  const hasTwitterCard = pageHtml.includes('name="twitter:card" content="summary_large_image"');
+  console.log('Page has dynamic og:image tag:', hasOgImage);
+  console.log('Page has summary_large_image twitter:card:', hasTwitterCard);
 
   console.log('\n=== ALL END-TO-END VALIDATIONS COMPLETE ===');
 }
