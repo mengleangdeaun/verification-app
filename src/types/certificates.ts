@@ -36,7 +36,8 @@ export interface CertificateRecord extends CreateCertificateInput {
 
 export type VerificationCode =
   | 'VERIFIED' | 'MISSING_PARAMS' | 'INVALID_SIGNATURE' | 'RECORD_NOT_FOUND'
-  | 'DATA_TAMPERED' | 'CERTIFICATE_REVOKED' | 'CERTIFICATE_EXPIRED';
+  | 'DATA_TAMPERED' | 'CERTIFICATE_REVOKED' | 'CERTIFICATE_EXPIRED'
+  | 'RATE_LIMITED';
 
 export interface VerificationResult {
   valid: boolean; code: VerificationCode; timestamp: string; record?: CertificateRecord;

@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 70" fill="none">
-  <!-- Dr. Virak Both signature path in blue ink -->
-  <path d="M20 45 C35 15, 45 10, 50 35 C55 55, 65 50, 75 25 C82 8, 88 12, 90 38 C92 48, 100 45, 110 32 C120 20, 130 22, 135 38 C140 50, 155 30, 165 25 C175 20, 185 35, 195 28 C205 22, 215 15, 225 18" stroke="#1e3a8a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M40 38 C70 42, 120 40, 180 34" stroke="#1e3a8a" stroke-width="1.6" stroke-linecap="round" />
-  <path d="M15 52 C50 50, 140 48, 220 42" stroke="#1e3a8a" stroke-width="1.2" stroke-linecap="round" opacity="0.8" />
-  <path d="M72 15 L78 52" stroke="#1e3a8a" stroke-width="2" stroke-linecap="round" />
-</svg>

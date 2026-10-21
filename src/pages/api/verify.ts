@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { listCertsFromLedger } from '../../utils/ledger';
 import { verifyCertificate } from '../../utils/verifier';
+import { enforceSecurityGuards } from '../../utils/security';
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -74,6 +75,30 @@ export const GET: APIRoute = async ({ request, url }) => {
   const id = url.searchParams.get('id');
   const sig = url.searchParams.get('sig');
 
+  // Enforce Proactive and Reactive Security Guards
+  const security = enforceSecurityGuards(request, id, sig);
+  if (!security.allowed) {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-RateLimit-Limit': '5',
+      'X-RateLimit-Remaining': String(security.remaining ?? 0),
+    };
+    if (security.retryAfter) {
+      headers['Retry-After'] = String(security.retryAfter);
+    }
+
+    return new Response(JSON.stringify({
+      valid: false,
+      code: security.code || 'RATE_LIMITED',
+      error: security.message || 'Request blocked by security guard.',
+      retryAfter: security.retryAfter,
+      timestamp: new Date().toISOString(),
+    }), {
+      status: security.status,
+      headers,
+    });
+  }
+
   const result = await verifyCertificate(id, sig);
 
   let statusCode = 200;
@@ -83,10 +108,16 @@ export const GET: APIRoute = async ({ request, url }) => {
     statusCode = 404;
   } else if (result.code === 'DATA_TAMPERED') {
     statusCode = 403;
+  } else if (result.code === 'RATE_LIMITED') {
+    statusCode = 429;
   }
 
   return new Response(JSON.stringify(result), {
     status: statusCode,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-RateLimit-Limit': '5',
+      'X-RateLimit-Remaining': String(security.remaining ?? 0),
+    },
   });
 };

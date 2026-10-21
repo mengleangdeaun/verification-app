@@ -10,7 +10,6 @@ interface Props {
   themeId: TemplateId;
   paperSize: PaperSize;
   orientation: PaperOrientation;
-  includeSignatures: boolean;
   isPreview?: boolean;
 }
 
@@ -73,120 +72,104 @@ export default function PrintablePaper(props: Props) {
 
   return (
     <div
-      class={`printable-certificate ${isLandscape() ? 'orientation-landscape' : 'orientation-portrait'} relative box-border overflow-hidden select-none transition-all duration-300 ${
+      class={`printable-certificate ${isLandscape() ? 'orientation-landscape' : 'orientation-portrait'} relative box-border select-none transition-all duration-300 ${
         props.isPreview
-          ? 'mx-auto shadow-xl border border-slate-200/80'
-          : 'print-only-container w-full h-full'
+          ? 'mx-auto shadow-lg sm:shadow-xl border border-slate-200/80 rounded-sm'
+          : 'print-only-container w-full h-full overflow-hidden'
       } ${theme().bgClass}`}
       style={{
         width: props.isPreview ? '100%' : `${geom().widthMm}mm`,
         'max-width': props.isPreview ? (isLandscape() ? '820px' : '580px') : undefined,
         height: props.isPreview ? 'auto' : `${geom().heightMm}mm`,
-        'min-height': props.isPreview ? (isLandscape() ? '480px' : '640px') : undefined,
-        'aspect-ratio': `${geom().widthMm} / ${geom().heightMm}`,
+        'aspect-ratio': props.isPreview ? undefined : `${geom().widthMm} / ${geom().heightMm}`,
       }}
     >
 
 
       {/* Certificate Framing */}
-      <div class={`h-full w-full flex flex-col justify-between ${theme().borderClass}`}>
+      <div class={`min-h-full w-full flex flex-col justify-between ${theme().borderClass}`}>
         {/* Header */}
-        <div class={`flex items-center justify-between border-b border-current/15 ${props.isPreview ? 'pb-3.5' : 'pb-4'}`}>
+        <div class={`flex items-center justify-between border-b border-current/15 ${props.isPreview ? 'pb-1.5 sm:pb-3.5' : 'pb-4'}`}>
           <div class="flex items-center">
             <img
               src={assetUrl('/assets/logo.svg')}
               alt="Emblem"
-              class={`logo-img ${props.isPreview ? 'h-16' : 'h-20'} w-auto object-contain shrink-0 block`}
-              style={{ height: props.isPreview ? '64px' : '78px', width: 'auto' }}
+              class={`logo-img ${props.isPreview ? 'h-7 sm:h-12 md:h-16' : 'h-20'} w-auto object-contain shrink-0 block`}
             />
           </div>
           <div class="flex items-center justify-end">
             <div class="qr-box p-0 m-0 bg-transparent">
-              <VectorQrCode value={cert().verifyUrl} class={props.isPreview ? 'w-16 h-16' : 'w-20 h-20'} />
+              <VectorQrCode value={cert().verifyUrl} class={props.isPreview ? 'w-7 h-7 sm:w-12 sm:h-12 md:w-16 md:h-16' : 'w-20 h-20'} />
             </div>
           </div>
         </div>
 
         {/* Central Citation */}
-        <div class={`my-auto text-center ${props.isPreview ? 'px-6 py-4' : 'px-8 py-4'}`}>
+        <div class={`my-auto text-center ${props.isPreview ? 'px-1 sm:px-6 py-1.5 sm:py-4' : 'px-8 py-4'}`}>
           {/* Official Document Masthead */}
-          <div class={props.isPreview ? 'mb-3' : 'mb-3.5'}>
+          <div class={props.isPreview ? 'mb-1 sm:mb-2.5' : 'mb-3.5'}>
             <h2 class={`${
               props.isPreview
-                ? (isLandscape() ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl')
+                ? (isLandscape() ? 'text-xs sm:text-2xl md:text-3xl' : 'text-xs sm:text-xl md:text-2xl')
                 : (isLandscape() ? 'text-3xl sm:text-4xl lg:text-5xl' : 'text-2xl sm:text-3xl')
-            } font-bold tracking-[0.10em] uppercase text-foreground whitespace-nowrap ${
+            } font-bold tracking-[0.06em] sm:tracking-[0.10em] uppercase text-foreground text-center ${props.isPreview ? 'whitespace-normal sm:whitespace-nowrap' : 'whitespace-nowrap'} ${
               isClassic() ? 'font-serif' : 'font-sans'
             }`}>
               {mastheadTitle()}
             </h2>
 
-            <div class={`flex items-center justify-center gap-2 ${props.isPreview ? 'my-2.5' : 'my-3'} text-current/25`}>
-              <div class={`h-px ${props.isPreview ? 'w-16' : 'w-28'} bg-current opacity-25`}></div>
-              <span class={props.isPreview ? 'text-xs' : 'text-sm'}>✦</span>
-              <div class={`h-px ${props.isPreview ? 'w-16' : 'w-28'} bg-current opacity-25`}></div>
+            <div class={`flex items-center justify-center gap-1.5 sm:gap-2 ${props.isPreview ? 'my-0.5 sm:my-2.5' : 'my-3'} text-current/25`}>
+              <div class={`h-px ${props.isPreview ? 'w-6 sm:w-16' : 'w-28'} bg-current opacity-25`}></div>
+              <span class={props.isPreview ? 'text-[8px] sm:text-xs' : 'text-sm'}>✦</span>
+              <div class={`h-px ${props.isPreview ? 'w-6 sm:w-16' : 'w-28'} bg-current opacity-25`}></div>
             </div>
           </div>
 
-          <p class={`lead-phrase ${props.isPreview ? 'text-xs sm:text-sm mb-2.5' : 'text-sm sm:text-base mb-3'} uppercase tracking-[0.22em] font-semibold opacity-65`}>
+          <p class={`lead-phrase ${props.isPreview ? 'text-[8px] sm:text-xs md:text-sm mb-0.5 sm:mb-2.5' : 'text-sm sm:text-base mb-3'} uppercase tracking-[0.16em] sm:tracking-[0.22em] font-semibold opacity-65`}>
             {leadPhrase()}
           </p>
           
-          <h1 class={`${props.isPreview ? 'text-3xl sm:text-4xl lg:text-5xl mb-3.5' : 'text-5xl sm:text-6xl mb-4'} font-bold tracking-tight text-foreground ${theme().fontFamilyHeading}`}>
+          <h1 class={`${props.isPreview ? 'text-base sm:text-3xl md:text-4xl lg:text-5xl mb-1 sm:mb-3.5' : 'text-5xl sm:text-6xl mb-4'} font-bold tracking-tight text-foreground ${theme().fontFamilyHeading}`}>
             {cert().recipient}
           </h1>
 
-          <p class={`citation-body ${props.isPreview ? 'text-sm sm:text-base max-w-2xl px-4' : 'text-lg sm:text-xl max-w-4xl px-6 leading-[1.8]'} mx-auto leading-relaxed text-foreground/85`}>
+          <p class={`citation-body ${props.isPreview ? 'text-[10px] sm:text-sm md:text-base max-w-2xl px-1 sm:px-4' : 'text-lg sm:text-xl max-w-4xl px-6 leading-[1.8]'} mx-auto leading-relaxed text-foreground/85`}>
             {fullCitation()}
           </p>
         </div>
 
         {/* Footer: Signatures & Centered Seal */}
-        <div class={`flex items-end justify-between border-t border-current/15 ${props.isPreview ? 'pt-4' : 'pt-4'} gap-4`}>
+        <div class={`flex items-end justify-between border-t border-current/15 ${props.isPreview ? 'pt-2 pb-1 sm:pt-4 sm:pb-2' : 'pt-6'} gap-1 sm:gap-4`}>
           {/* Signatory 1 */}
-          <div class={`signature-col ${props.isPreview ? 'w-40 sm:w-44' : 'w-52'} text-center`}>
-            <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center pb-1`}>
-              <img
-                src={assetUrl('/assets/sig-1.svg')}
-                alt="Signature 1"
-                class={`signature-img ${props.isPreview ? 'h-12' : 'h-14'} max-w-full object-contain transition-opacity duration-200 ${
-                  props.includeSignatures ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                }`}
-              />
-            </div>
+          <div class={`signature-col ${props.isPreview ? 'w-24 sm:w-44 md:w-48' : 'w-56'} text-center`}>
+            {/* Signature headroom reserved for physical wet-ink signing */}
+            <div class={`signature-space ${props.isPreview ? 'h-3 sm:h-7' : 'h-10'}`} />
             <div class="border-t border-current/50 pt-1">
-              <p class={`signatory-name ${props.isPreview ? 'text-xs sm:text-sm' : 'text-base'} font-bold truncate text-foreground`}>{cert().sig1Name}</p>
-              <p class={`signatory-title ${props.isPreview ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} opacity-70 truncate`}>{cert().sig1Title}</p>
+              <p class={`signatory-name ${props.isPreview ? 'text-[9px] sm:text-xs md:text-sm' : 'text-base'} font-bold truncate text-foreground leading-tight`}>{cert().sig1Name}</p>
+              <p class={`signatory-title ${props.isPreview ? 'text-[7.5px] sm:text-[10px] md:text-xs' : 'text-xs sm:text-sm'} opacity-75 truncate leading-tight mt-0.5`}>{cert().sig1Title}</p>
             </div>
           </div>
 
           {/* Official Seal Centered Between Signatures */}
-          <div class="flex items-center justify-center">
-            <img src={theme().sealAssetPath} alt="Seal" class={`seal-img ${props.isPreview ? 'h-16 w-16 sm:h-18 sm:w-18' : 'h-22 w-22'} object-contain drop-shadow-xs`} />
+          <div class="flex items-center justify-center shrink-0">
+            <img src={theme().sealAssetPath} alt="Seal" class={`seal-img ${props.isPreview ? 'h-8 w-8 sm:h-14 sm:w-14 md:h-16 md:w-16' : 'h-22 w-22'} object-contain drop-shadow-xs`} />
           </div>
 
           {/* Signatory 2 */}
-          <div class={`signature-col ${props.isPreview ? 'w-40 sm:w-44' : 'w-52'} text-center`}>
+          <div class={`signature-col ${props.isPreview ? 'w-24 sm:w-44 md:w-48' : 'w-56'} text-center`}>
             {cert().sig2Name ? (
               <>
-                <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center pb-1`}>
-                  <img
-                    src={assetUrl('/assets/sig-2.svg')}
-                    alt="Signature 2"
-                    class={`signature-img ${props.isPreview ? 'h-12' : 'h-14'} max-w-full object-contain transition-opacity duration-200 ${
-                      props.includeSignatures ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                    }`}
-                  />
-                </div>
+                <div class={`signature-space ${props.isPreview ? 'h-3 sm:h-7' : 'h-10'}`} />
                 <div class="border-t border-current/50 pt-1">
-                  <p class={`signatory-name ${props.isPreview ? 'text-xs sm:text-sm' : 'text-base'} font-bold truncate text-foreground`}>{cert().sig2Name}</p>
-                  <p class={`signatory-title ${props.isPreview ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm'} opacity-70 truncate`}>{cert().sig2Title}</p>
+                  <p class={`signatory-name ${props.isPreview ? 'text-[9px] sm:text-xs md:text-sm' : 'text-base'} font-bold truncate text-foreground leading-tight`}>{cert().sig2Name}</p>
+                  <p class={`signatory-title ${props.isPreview ? 'text-[7.5px] sm:text-[10px] md:text-xs' : 'text-xs sm:text-sm'} opacity-75 truncate leading-tight mt-0.5`}>{cert().sig2Title}</p>
                 </div>
               </>
             ) : (
-              <div class={`signature-img-container ${props.isPreview ? 'h-14' : 'h-16'} flex items-end justify-center`}>
-                <div class={`border-t border-current/30 ${props.isPreview ? 'w-32' : 'w-44'} pt-1`}>
-                  <p class="text-[10px] opacity-50">Verified Authority</p>
+              <div class="text-center">
+                <div class={`signature-space ${props.isPreview ? 'h-3 sm:h-7' : 'h-10'}`} />
+                <div class={`border-t border-current/30 ${props.isPreview ? 'w-20 sm:w-32' : 'w-44'} mx-auto pt-1`}>
+                  <p class="text-[7.5px] sm:text-[10px] opacity-50">Verified Authority</p>
                 </div>
               </div>
             )}

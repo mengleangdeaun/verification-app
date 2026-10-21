@@ -46,9 +46,7 @@ verification-app/
 │   ├── favicon.svg                    # SVG icon
 │   └── assets/                        # Static logos, seals & signatures
 │       ├── logo.svg                   # Organization emblem
-│       ├── seal.svg                   # Vector verification stamp
-│       ├── sig-1.svg                  # Static vector signature 1
-│       └── sig-2.svg                  # Static vector signature 2
+│       └── seal.svg                   # Vector verification stamp
 └── src/
     ├── layouts/
     │   └── Layout.astro               # Base HTML container (< 30 LOC)

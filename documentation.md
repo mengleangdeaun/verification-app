@@ -28,8 +28,8 @@ The **Certificate Ledger & Verification System** is a high-trust, cryptographica
 * **In-Scope:**
   * Certificate issuance, live search matrix, and one-click revocation/restoration in `/admin`.
   * Asymmetric Ed25519 signing (`POST /api/create`), revocation (`PATCH /api/create`), and verification (`GET /api/verify`).
-  * Public QR verification page (`check.astro`) with static SVG signatures (`public/assets/sig-1.svg`, `sig-2.svg`) and manual ID lookup (`index.astro`).
-  * Native browser print pipeline (`certificate-printer`) supporting **A4** & **US Letter**, **Landscape** & **Portrait**, and an **Include/Exclude Digital Signatures** toggle for wet-ink signing vs. digital PDF saving.
+  * Public QR verification page (`check.astro`) with authoritative signatory badges and manual ID lookup (`index.astro`).
+  * Native browser print pipeline (`certificate-printer`) supporting **A4** & **US Letter**, **Landscape** & **Portrait**, with dedicated wet-ink signing headroom above signatory rules.
   * Serverless **Neon PostgreSQL** persistence layer (`@neondatabase/serverless`) with ACID transactions, indexing, and automatic local JSON mock fallback for offline development.
   * Optional export to CSV/Excel for non-technical administrators.
 * **Out-of-Scope:**
@@ -102,11 +102,11 @@ The **Certificate Ledger & Verification System** is a high-trust, cryptographica
 5. **Zero-Trust Edge Security:** Secret keys (`ED25519_PRIVATE_KEY_B64`, `DATABASE_URL`, `ADMIN_API_SECRET`) must only be referenced inside server-side API routes and server utilities (`src/pages/api/*.ts`, `src/utils/*.ts`).
 
 ### 3.2 UI/UX & Signature Display Principles
-1. **Dual-Mode Signature Rendering:**
-   * **On Public Verification (`RecordDetails.tsx`):** Always display the static SVG signatures (`/assets/sig-1.svg` and `/assets/sig-2.svg`) above Signatory 1 and Signatory 2 so public verifiers see a complete, authoritative record.
-   * **On Admin Print Canvas (`PrintablePaper.tsx`):** Controlled by `dashboardStore.includeSignaturesOnPrint`. When `false` (default for physical printing), the space above the signatory line remains blank so executives can physically sign the paper with a pen after printing. When `true` (for digital PDF saving or pre-signed batch printing), `/assets/sig-1.svg` and `/assets/sig-2.svg` are rendered above the signatory lines.
+1. **Physical Wet-Ink & Digital Cryptographic Trust:**
+   * **On Public Verification (`RecordDetails.tsx`):** Displays verified Executive Authority badges for signatories with instant Ed25519 cryptographic audit proof.
+   * **On Admin Print Canvas (`PrintablePaper.tsx`):** Features authentic `.signature-space` vertical headroom above signatory rule lines so executives can physically sign the paper with a pen after printing.
 2. **Forensic Clarity on Verification Views:**
-   * **Verified (`VERIFIED`):** Emerald Green (`#059669`), cryptographic hash badge, static SVG signatures, and official vector seal.
+   * **Verified (`VERIFIED`):** Emerald Green (`#059669`), cryptographic hash badge, verified authority indicators, and official vector seal.
    * **Revoked / Expired (`CERTIFICATE_REVOKED` / `CERTIFICATE_EXPIRED`):** Amber/Orange warning banner clearly stating the certificate was genuinely issued in the past but is no longer valid.
    * **Counterfeit / Tampered (`INVALID_SIGNATURE` / `DATA_TAMPERED`):** High-contrast Red (`#DC2626`) alert banner warning the auditor of forgery or unauthorized database modification.
 
@@ -125,11 +125,9 @@ verification-app/
 ├── tsconfig.json                      # `"jsx": "preserve"`, `"jsxImportSource": "solid-js"`
 ├── public/
 │   ├── favicon.svg
-│   └── assets/                        # Static logos, legal vector stamps, & SVG signatures
+│   └── assets/                        # Static logos & legal vector stamps
 │       ├── logo.svg                   # Organization primary emblem
-│       ├── seal.svg                   # Official vector verification stamp
-│       ├── sig-1.svg                  # Static vector signature for Signatory 1
-│       └── sig-2.svg                  # Static vector signature for Signatory 2
+│       └── seal.svg                   # Official vector verification stamp
 └── src/
     ├── layouts/
     │   └── Layout.astro               # Base HTML boilerplate container (<30 LOC)
@@ -372,15 +370,12 @@ export interface TemplateThemeConfig {
 }
 ```
 
-### 5.3 Dynamic Print Geometry & Signature Toggle (`PrintablePaper.tsx` & `printTrigger.ts`)
+### 5.3 Dynamic Print Geometry & Wet-Ink Headroom (`PrintablePaper.tsx` & `printTrigger.ts`)
 1. **Paper Dimension Matrix (`src/modules/certificate-printer/constants/themes.ts`):**
    * `A4`: `210mm × 297mm` (`landscape`: `297mm × 210mm`, `portrait`: `210mm × 297mm`)
    * `LETTER`: `215.9mm × 279.4mm` (`landscape`: `279.4mm × 215.9mm`, `portrait`: `215.9mm × 279.4mm`)
-2. **Signature Visibility Toggle (`includeSignaturesOnPrint`):**
-   * Inside `PrintablePaper.tsx`, each signatory block renders:
-     * The SVG image (`/assets/sig-1.svg` or `/assets/sig-2.svg`) inside a fixed-height container (`h-14`).
-     * When `dashboardStore.includeSignaturesOnPrint` is `true`, the SVG is visible (`opacity-100`).
-     * When `dashboardStore.includeSignaturesOnPrint` is `false`, the SVG is hidden (`opacity-0 pointer-events-none`), preserving the exact vertical spacing (`h-14`) above the horizontal signature line so the physical paper has room for wet-ink signing.
+2. **Physical Wet-Ink Signing Architecture (`PrintablePaper.tsx`):**
+   * Inside `PrintablePaper.tsx`, each signatory block reserves authentic `.signature-space` vertical headroom (`h-10` in print, `h-7` in preview) above the horizontal rule line (`border-t border-current/50`), allowing physical ink signing while Ed25519 guarantees tamper-evident digital proof.
 3. **Dynamic `@page` Injection (`src/modules/certificate-printer/utils/printTrigger.ts`):**
    Injects `@page { size: ${size} ${orientation}; margin: 0mm !important; }` into `<head>` immediately prior to calling `window.print()`.
 
@@ -424,7 +419,6 @@ export interface TemplateThemeConfig {
   * `activeTemplateId: TemplateId` (default: `'classic-diploma'`)
   * `paperSize: PaperSize` (default: `'A4'`)
   * `orientation: PaperOrientation` (default: `'landscape'`)
-  * `includeSignaturesOnPrint: boolean` (default: `false` for physical wet-signing; `true` renders static SVGs on print/PDF)
   * `searchFilter: string`
 * **FRS-ADM-02 (`CreateCertForm.tsx`):** `< 150 LOC`. Resilient state machine with double-submit prevention:
   * Features `isSubmitting` idempotency guard that freezes `<fieldset disabled>` and shows an animated loading spinner.
@@ -439,11 +433,11 @@ export interface TemplateThemeConfig {
   1. Theme (`classic-diploma`, `modern-tech`, `iso-compliance`)
   2. Paper Size (`A4`, `LETTER`)
   3. Orientation (`landscape`, `portrait`)
-  4. Toggle: **"Include SVG Signatures on Print/PDF"** (`includeSignaturesOnPrint`)
+  4. Wet-Ink manual signing layout specification badge
 
 ### 6.4 Verification Scanner Module (`src/modules/verification-scanner/`)
 * **FRS-SCN-01 (`StatusBanner.tsx`):** `< 100 LOC`. Renders distinct semantic status banner for all verification codes (`VERIFIED`, `CERTIFICATE_REVOKED`, `CERTIFICATE_EXPIRED`, `DATA_TAMPERED`, `INVALID_SIGNATURE`, `RECORD_NOT_FOUND`, `MISSING_PARAMS`).
-* **FRS-SCN-02 (`RecordDetails.tsx`):** Renders verified certificate fields. **Always** renders static `/assets/sig-1.svg` above Signatory 1 (and `/assets/sig-2.svg` above Signatory 2 if `signatory2Name` is present), alongside `/assets/seal.svg`.
+* **FRS-SCN-02 (`RecordDetails.tsx`):** Renders verified certificate fields. Renders verified Executive Authority badges for Signatory 1 and Signatory 2, alongside the official vector seal `/assets/seal.svg`.
 
 ---
 

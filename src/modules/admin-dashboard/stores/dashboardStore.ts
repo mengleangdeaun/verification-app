@@ -94,7 +94,6 @@ function createDashboardStore() {
     activeTemplateId: 'classic-diploma' as TemplateId,
     paperSize: 'A4' as PaperSize,
     orientation: 'landscape' as PaperOrientation,
-    includeSignaturesOnPrint: false,
     searchFilter: '',
     docTypeFilter: 'ALL' as 'ALL' | DocumentType,
     draft: { ...initialDraft },

@@ -3,6 +3,7 @@ import { buildCanonicalPayload, type CertificateRecord } from '../../types/certi
 import { signCanonicalPayload } from '../../utils/crypto';
 import { appendCertToLedger, updateCertStatusInLedger, updateCertInLedger, deleteCertFromLedger } from '../../utils/ledger';
 import { buildVerificationUrl } from '../../utils/paths';
+import { invalidateCachedVerification } from '../../utils/security';
 import crypto from 'node:crypto';
 
 export const prerender = false;
@@ -135,6 +136,8 @@ export const PATCH: APIRoute = async ({ request }) => {
       SHEETS_BEARER_TOKEN: process.env.SHEETS_BEARER_TOKEN || import.meta.env.SHEETS_BEARER_TOKEN,
     });
 
+    invalidateCachedVerification(id);
+
     return new Response(JSON.stringify({ id, status }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -206,6 +209,8 @@ export const PUT: APIRoute = async ({ request }) => {
       PUBLIC_APP_URL: appUrl,
     });
 
+    invalidateCachedVerification(id);
+
     return new Response(JSON.stringify(updated), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -245,6 +250,8 @@ export const DELETE: APIRoute = async ({ request, url }) => {
       SHEETS_PROXY_URL: process.env.SHEETS_PROXY_URL || import.meta.env.SHEETS_PROXY_URL,
       SHEETS_BEARER_TOKEN: process.env.SHEETS_BEARER_TOKEN || import.meta.env.SHEETS_BEARER_TOKEN,
     });
+
+    invalidateCachedVerification(id);
 
     return new Response(JSON.stringify({ success: true, id }), {
       status: 200,

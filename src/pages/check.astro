@@ -2,28 +2,249 @@
 import Layout from '../layouts/Layout.astro';
 import { extractQueryParams } from '../modules/verification-scanner/hooks/useQueryParam';
 import { verifyCertificate } from '../utils/verifier';
+import { enforceSecurityGuards } from '../utils/security';
 import StatusBanner from '../modules/verification-scanner/components/StatusBanner';
 import RecordDetails from '../modules/verification-scanner/components/RecordDetails';
 import PrintablePaper from '../modules/certificate-printer/components/PrintablePaper';
-import { appPath } from '../utils/paths';
+import { appPath, assetUrl } from '../utils/paths';
 
 export const prerender = false;
 
 const { id, sig } = extractQueryParams(Astro.url.searchParams);
-const result = await verifyCertificate(id, sig);
+const initialTab = Astro.url.searchParams.get('tab') === 'summary' ? 'summary' : 'paper';
+
+let result;
+const security = enforceSecurityGuards(Astro.request, id, sig);
+
+if (!security.allowed) {
+  Astro.response.status = security.status;
+  if (security.retryAfter) {
+    Astro.response.headers.set('Retry-After', String(security.retryAfter));
+  }
+  result = {
+    valid: false,
+    code: security.code || 'RATE_LIMITED',
+    timestamp: new Date().toISOString(),
+  };
+} else {
+  result = await verifyCertificate(id, sig);
+}
 ---
 <Layout title={`Verification: ${id || 'Certificate Check'}`}>
-  <main class="max-w-4xl mx-auto w-full px-4 py-8 sm:py-12 print:hidden">
-    <div class="mb-6 flex items-center justify-between">
-      <a href={appPath('/')} class="text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors">
-        &larr; Verify Another Document
+  {/* Public Brand & Trust Navigation Header */}
+  <header class="w-full bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-30 no-print">
+    <div class="max-w-4xl mx-auto px-3 py-3 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4">
+      <a href={appPath('/')} class="flex items-center gap-2 sm:gap-2.5 hover:opacity-90 transition-opacity min-w-0">
+        <img
+          src={assetUrl('/assets/logo.svg')}
+          alt="s-cool"
+          class="h-8 sm:h-10 w-auto object-contain shrink-0"
+        />
       </a>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <a
+          href={appPath('/')}
+          class="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted border border-border/80 rounded-md transition-all active:scale-[0.98] shrink-0"
+          title="Verify another credential"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span class="hidden sm:inline">Verify Another</span>
+          <span class="sm:hidden text-[11px]">New</span>
+        </a>
+      </div>
     </div>
+  </header>
 
-    <StatusBanner code={result.code} timestamp={result.timestamp} payloadHash={result.record?.payloadHash} />
+  <main class="max-w-4xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-8 print:hidden flex-1 space-y-4 sm:space-y-6">
+    {/* Official Verification Status Banner (Clean, Professional, Non-Technical) */}
+    <StatusBanner
+      client:load
+      code={result.code}
+      timestamp={result.timestamp}
+    />
 
-    {result.record && <RecordDetails record={result.record} />}
+    {/* Verified Record Details & Mobile-First Credential View */}
+    {result.record ? (
+      <RecordDetails client:load record={result.record} initialTab={initialTab} />
+    ) : (
+      /* Fallback Lookup Form for Missing / Invalid Parameters */
+      <div class="mt-6 bg-card border border-border p-5 sm:p-8 shadow-xs">
+        <div class="max-w-lg mx-auto text-center mb-6">
+          <div class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-3">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h2 class="text-lg sm:text-xl font-bold text-foreground">Look Up Credential</h2>
+          <p class="text-xs sm:text-sm text-muted-foreground mt-1">
+            Enter the official Certificate Identifier and Digital Signature printed on the physical credential or scan its QR code.
+          </p>
+        </div>
+
+        <form action={appPath('/check')} method="GET" class="max-w-md mx-auto space-y-4" id="fallback-lookup-form">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label for="fallback-id" class="block text-xs font-semibold text-foreground">Document / Certificate Identifier</label>
+              <span id="fallback-id-status" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium hidden">✓ Valid format</span>
+            </div>
+            <input
+              id="fallback-id"
+              name="id"
+              type="text"
+              required
+              value={id || ''}
+              placeholder="e.g. CERT-2026-446A4D9A or LOA-2026-8F92A1"
+              class="w-full h-10 px-3.5 border border-input bg-background font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all rounded-md"
+            />
+            <p id="fallback-id-hint" class="text-[10.5px] text-amber-600 dark:text-amber-400 mt-1 hidden">
+              Format: CERT-, LOA-, LOP- followed by year & code
+            </p>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label for="fallback-sig" class="block text-xs font-semibold text-foreground">Verification Signature</label>
+              <span id="fallback-sig-status" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium hidden">✓ Valid signature</span>
+            </div>
+            <input
+              id="fallback-sig"
+              name="sig"
+              type="text"
+              required
+              value={sig || ''}
+              placeholder="Paste signature code from certificate..."
+              class="w-full h-10 px-3.5 border border-input bg-background font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all rounded-md"
+            />
+            <p id="fallback-sig-hint" class="text-[10.5px] text-amber-600 dark:text-amber-400 mt-1 hidden">
+              Signature must be a valid 86-character verification code
+            </p>
+          </div>
+
+          {/* Proactive Bot Honeypot Input */}
+          <input
+            type="text"
+            name="_hp_check"
+            tabindex="-1"
+            autocomplete="off"
+            class="hidden absolute opacity-0 pointer-events-none"
+            aria-hidden="true"
+          />
+
+          <button
+            id="fallback-submit-btn"
+            type="submit"
+            disabled
+            class="w-full h-10 inline-flex items-center justify-center gap-2 font-semibold text-xs transition-all active:scale-[0.98] shadow-xs rounded-md opacity-40 cursor-not-allowed bg-muted text-muted-foreground/60 border border-input"
+          >
+            <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span id="fallback-btn-label">Enter Valid Certificate Info to Verify</span>
+          </button>
+        </form>
+
+        <script is:inline>
+          (function() {
+            function initFallbackValidation() {
+              var idInput = document.getElementById('fallback-id');
+              var sigInput = document.getElementById('fallback-sig');
+              var submitBtn = document.getElementById('fallback-submit-btn');
+              var btnLabel = document.getElementById('fallback-btn-label');
+              var idHint = document.getElementById('fallback-id-hint');
+              var sigHint = document.getElementById('fallback-sig-hint');
+              var idStatus = document.getElementById('fallback-id-status');
+              var sigStatus = document.getElementById('fallback-sig-status');
+
+              if (!idInput || !sigInput || !submitBtn) return;
+
+              function check() {
+                var idVal = idInput.value.trim();
+                var sigVal = sigInput.value.trim();
+
+                var isIdValid = /^(CERT|COQ|LOA|LOP|[A-Za-z]{2,6})-\d{4}-[A-Za-z0-9]{4,16}$/.test(idVal);
+                var isSigValid = /^[A-Za-z0-9_-]{80,90}$/.test(sigVal);
+
+                if (idVal.length > 0 && !isIdValid) {
+                  idHint && idHint.classList.remove('hidden');
+                  idStatus && idStatus.classList.add('hidden');
+                  idInput.classList.add('border-amber-500/70');
+                } else if (isIdValid) {
+                  idHint && idHint.classList.add('hidden');
+                  idStatus && idStatus.classList.remove('hidden');
+                  idInput.classList.remove('border-amber-500/70');
+                } else {
+                  idHint && idHint.classList.add('hidden');
+                  idStatus && idStatus.classList.add('hidden');
+                  idInput.classList.remove('border-amber-500/70');
+                }
+
+                if (sigVal.length > 0 && !isSigValid) {
+                  sigHint && sigHint.classList.remove('hidden');
+                  sigStatus && sigStatus.classList.add('hidden');
+                  sigInput.classList.add('border-amber-500/70');
+                } else if (isSigValid) {
+                  sigHint && sigHint.classList.add('hidden');
+                  sigStatus && sigStatus.classList.remove('hidden');
+                  sigInput.classList.remove('border-amber-500/70');
+                } else {
+                  sigHint && sigHint.classList.add('hidden');
+                  sigStatus && sigStatus.classList.add('hidden');
+                  sigInput.classList.remove('border-amber-500/70');
+                }
+
+                var formValid = isIdValid && isSigValid;
+                submitBtn.disabled = !formValid;
+
+                if (formValid) {
+                  submitBtn.className = 'w-full h-10 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-all active:scale-[0.98] shadow-xs cursor-pointer rounded-md';
+                  if (btnLabel) btnLabel.textContent = 'Authenticate Credential';
+                } else {
+                  submitBtn.className = 'w-full h-10 inline-flex items-center justify-center gap-2 font-semibold text-xs transition-all rounded-md opacity-40 cursor-not-allowed bg-muted text-muted-foreground/60 border border-input';
+                  if (btnLabel) btnLabel.textContent = 'Enter Valid Certificate Info to Verify';
+                }
+              }
+
+              idInput.addEventListener('input', check);
+              sigInput.addEventListener('input', check);
+              check();
+            }
+
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', initFallbackValidation);
+            } else {
+              initFallbackValidation();
+            }
+          })();
+        </script>
+
+        <div class="mt-6 pt-5 border-t border-border/80 flex items-center justify-center text-xs text-muted-foreground gap-4">
+          <a href={appPath('/')} class="hover:text-foreground font-medium transition-colors flex items-center gap-1">
+            &larr; Return to Portal Home
+          </a>
+          <span>•</span>
+          <a href={appPath('/admin')} class="hover:text-foreground font-medium transition-colors flex items-center gap-1">
+            Registrar Workspace &rarr;
+          </a>
+        </div>
+      </div>
+    )}
   </main>
+
+  {/* Public Portal Trust Footer */}
+  <footer class="mt-auto border-t border-border bg-background py-6 px-4 no-print text-center text-xs text-muted-foreground">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p class="text-[11px] text-muted-foreground">
+        Official Verifiable Credential Portal · Secure Registry Record
+      </p>
+      <div class="flex items-center gap-4 text-[11px]">
+        <a href={appPath('/')} class="hover:text-foreground transition-colors">Portal Home</a>
+        <a href={appPath('/admin')} class="hover:text-foreground transition-colors">Authorized Registrar</a>
+      </div>
+    </div>
+  </footer>
 
   {/* Dedicated Window.print() Target Overlay for Clean Vector Paper Printing */}
   {result.record && (
@@ -33,7 +254,6 @@ const result = await verifyCertificate(id, sig);
         themeId={result.record.templateId || 'classic-diploma'}
         paperSize={result.record.paperSize || 'A4'}
         orientation={result.record.orientation || 'landscape'}
-        includeSignatures={true}
         isPreview={false}
       />
     </div>

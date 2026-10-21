@@ -2,7 +2,6 @@ import type { PaperOrientation, PaperSize, TemplateId } from '../../../types/tem
 import { dashboardStore } from '../stores/dashboardStore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/card';
 import { Badge } from '@/components/badge';
-import { Switch } from '@/components/switch';
 
 export default function TemplatePicker() {
   const { state, setState } = dashboardStore;
@@ -98,21 +97,17 @@ export default function TemplatePicker() {
         </div>
       </div>
 
-      {/* Signature Toggle using Kobalte Switch */}
-      <div class="pt-3 border-t border-border flex items-center justify-between">
-        <div class="pr-4">
-          <p class="text-xs font-semibold text-foreground">Include Digital SVG Signatures</p>
-          <p class="text-[11px] text-muted-foreground mt-0.5">
-            {state.includeSignaturesOnPrint
-              ? 'Render vector signatures for digital PDF export'
-              : 'Signatures blank for physical wet-ink signing'}
-          </p>
+      {/* Physical Wet-Ink Signing Specification */}
+      <div class="pt-3 border-t border-border flex items-center gap-3">
+        <div class="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
         </div>
-        <Switch
-          checked={state.includeSignaturesOnPrint}
-          onChange={(val) => setState('includeSignaturesOnPrint', val)}
-          aria-label="Include digital SVG signatures"
-        />
+        <div class="text-[11px] text-muted-foreground leading-snug">
+          <span class="font-semibold text-foreground">Physical Wet-Ink Signing Layout</span>
+          <p class="mt-0.5">Certificates feature dedicated headroom above signatory rules for manual wet signatures.</p>
+        </div>
       </div>
     </CardContent>
   </Card>

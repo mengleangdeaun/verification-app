@@ -91,8 +91,8 @@ export default function AdminDashboardShell() {
           <div class="min-h-screen bg-slate-50/80 flex items-center justify-center p-4">
             <Card class="w-full max-w-md border-border">
               <CardHeader class="text-center pb-4">
-                <div class="h-16 w-16 mx-auto mb-3 p-2 bg-white border border-border shadow-xs flex items-center justify-center">
-                  <img src={assetUrl('/assets/logo.svg')} alt="Emblem" class="h-12 w-12 object-contain" />
+                <div class="h-16 w-auto mx-auto mb-3 flex items-center justify-center">
+                  <img src={assetUrl('/assets/logo.svg')} alt="Emblem" class="h-16 w-auto object-contain" />
                 </div>
                 <CardTitle class="text-xl font-bold font-serif text-foreground">Registrar Authorization</CardTitle>
                 <CardDescription>Enter Master Admin API Secret to unlock ledger operations</CardDescription>
@@ -145,7 +145,7 @@ export default function AdminDashboardShell() {
             <div class="max-w-[1600px] mx-auto px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
               {/* Left: Branding & Status Badge */}
               <div class="flex items-center gap-3.5">
-                <div class="h-10 w-10 p-1.5 bg-white border border-border shadow-xs flex items-center justify-center">
+                <div class="h-10 w-auto flex items-center justify-center">
                   <img src={assetUrl('/assets/logo.svg')} alt="Emblem" class="h-full w-full object-contain" />
                 </div>
                 <div>
@@ -262,7 +262,6 @@ export default function AdminDashboardShell() {
                     themeId={state.activeTemplateId}
                     paperSize={state.paperSize}
                     orientation={state.orientation}
-                    includeSignatures={state.includeSignaturesOnPrint}
                     isPreview={true}
                   />
                 </div>
@@ -277,7 +276,6 @@ export default function AdminDashboardShell() {
               themeId={state.activeTemplateId}
               paperSize={state.paperSize}
               orientation={state.orientation}
-              includeSignatures={state.includeSignaturesOnPrint}
               isPreview={false}
             />
           </div>

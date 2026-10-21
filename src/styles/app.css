@@ -245,12 +245,8 @@
     width: 15rem !important; /* 240px */
   }
 
-  .printable-certificate .signature-img-container {
-    height: 4.75rem !important; /* 76px */
-  }
-
-  .printable-certificate .signature-img {
-    height: 4rem !important; /* 64px */
+  .printable-certificate .signature-space {
+    height: 3.5rem !important; /* Headroom reserved for physical wet-ink signing */
   }
 
   .printable-certificate .signatory-name {
